@@ -2,7 +2,9 @@
 
 ## Current State
 
-The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin skeleton. The plugin exposes a bridge, subsystem, diagnostics model, and Unreal test-tone synth component. A fresh Spatial Root clone exists inside the plugin ThirdParty tree, on `devel` at `b786ef8`, with recursive submodules initialized. The Unreal shell/plugin builds, and Spatial Root's realtime engine builds inside the repo. Spatial Root is not linked into Unreal yet.
+The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked as a parent repo submodule under the plugin ThirdParty tree, on `devel` at `b786ef8`, with recursive submodules initialized.
+
+`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. Spatial Root source remains unchanged. The TransLab layout is the benchmark target, parsed as 18 output channels. A UE-side 18-channel render-bus synth component exists as the intended Unreal insertion point, but Spatial Root PCM is not feeding it yet.
 
 ## Confirmed Facts
 
@@ -66,6 +68,18 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Evidence: Build completed and produced `libEngineSessionCore.a` plus `spatialroot_realtime`.
 - File or command: `./build.sh --engine-only`
 
+- Fact: `SpatialRootHost` links against `EngineSessionCore` without modifying the Spatial Root submodule.
+- Evidence: `UERootEditor` build succeeded after adding Spatial Root static libraries and frameworks to `SpatialRootHost.Build.cs`.
+- File or command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
+
+- Fact: The benchmark layout is TransLab, requiring 18 output channels.
+- Evidence: `translab-sono-layout.json` contains 16 speakers and 2 subwoofers with channels `0` through `17`.
+- File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/speaker_layouts/translab-sono-layout.json`
+
+- Fact: A UE-side render-bus component exists, but it is not fed by Spatial Root PCM yet.
+- Evidence: `USpatialRootRenderBusComponent` queues interleaved float blocks and outputs them through `USynthComponent`; no current `EngineSession` API provides those blocks.
+- File or command: `Unreal/Plugins/SpatialRootHost/Source/SpatialRootHost/Public/SpatialRootRenderBusComponent.h`
+
 ## Open Questions
 
 - Question: Should Spatial Root be integrated into `ue-root` as a git submodule, copied ThirdParty source, or linked from the local absolute path for the first pass?
@@ -84,7 +98,7 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 
 - Blocker: Spatial Root-rendered PCM cannot currently be claimed to enter Unreal's mixer.
 - Evidence: Current realtime path renders inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, reached from AlloLib `AudioIO`, and no `EngineSession` host-pull render method was found.
-- Possible workaround: Keep the Unreal test-tone generator and bridge skeleton; add a future Spatial Root render-buffer API or deliberate wrapper around current internals.
+- Possible workaround: Use `USpatialRootRenderBusComponent` as the Unreal-side internal render bus once a host-owned Spatial Root PCM render path exists. Until then, `EngineSession::start()` is device-owned through AlloLib.
 
 ## Last Completed Tasks
 
@@ -116,6 +130,14 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Result: `UERootEditor` build succeeded.
 - Files changed: Generated Unreal build outputs under ignored directories.
 
+- Task: Linked EngineSessionCore into the Unreal plugin.
+- Result: `SpatialRootHost` compiles and links with the Spatial Root static libraries from the submodule build.
+- Files changed: `SpatialRootHost.Build.cs`, `SpatialRootBridge.h`, `SpatialRootBridge.cpp`
+
+- Task: Added Unreal internal render-bus source.
+- Result: `USpatialRootRenderBusComponent` provides an 18-channel queued interleaved-float source for future Spatial Root PCM handoff.
+- Files changed: `SpatialRootRenderBusComponent.h`, `SpatialRootRenderBusComponent.cpp`
+
 ## Local Unreal Setup
 
 - Unreal path checked: `/Users/lucian/UE_5.7`
@@ -124,10 +146,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Project path: `/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject`
 - Build command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
 - Build result: Succeeded.
-- Plugin status: Skeleton created.
+- Plugin status: Compiles with `EngineSessionCore` linked.
 - Spatial Root dependency status: In-repo clone found and built; not linked into Unreal plugin yet.
 - In-repo Spatial Root checkout: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, branch `devel`, commit `b786ef8`, recursive submodules initialized.
-- Audio test status: Test-tone synth component added and compiled; not yet run/auditioned in editor.
+- Audio test status: Test-tone synth and render-bus synth components compile; not yet run/auditioned in editor.
 - Next step: Add a minimal level/actor or Blueprint to instantiate the test tone and expose bridge diagnostics.
 
 ## Local Test Data
@@ -135,16 +157,16 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - sourceData path: `/Users/lucian/projects/spatialroot/sourceData`
 - Exists: Yes
 - ADM/BW64 candidates: `CANYON-ATMOS-LFE.wav`, `ASCENT-ATMOS-LFE.wav`, `OFFERING-ATMOS-LFE.wav`, `SWALE-ATMOS-LFE.wav`, `EDEN-ATMOS-MIX-LFE.wav`, `sphere-ascent-atmos.wav`, `360RA_test.wav`
-- Layout JSON candidates: `spatial_engine/speaker_layouts/stereo.json`, `spatial_engine/speaker_layouts/example_layouts/5_1.json`, `spatial_engine/speaker_layouts/example_layouts/quad_4.json`, `spatial_engine/speaker_layouts/example_layouts/ring8_top4.json`, and additional layouts in the in-repo clone.
+- Layout JSON candidates: TransLab benchmark selected at `spatial_engine/speaker_layouts/translab-sono-layout.json`; other candidates include `stereo.json`, `example_layouts/5_1.json`, `example_layouts/quad_4.json`, and `example_layouts/ring8_top4.json`.
 - LUSID candidates: `sourceData/lusid_package/scene.lusid.json`, `sourceData/qgoo_LUSID/scene.lusid.json`
 - Selected first ADM/BW64 test file: None selected.
-- Selected first layout file: None selected.
+- Selected first layout file: `spatial_engine/speaker_layouts/translab-sono-layout.json`
 - Open questions: Need a confirmed ADM/BW64 plus LUSID scene plus layout JSON pair.
 
 ## UE Audio Investigation
 
 - Audio entry point tested: Not runtime-tested yet; `USynthComponent` skeleton added.
-- Test tone/silence status: Source code compiled successfully; runtime audio test pending.
+- Test tone/silence status: Test tone and 18-channel render-bus source code compiled successfully; runtime audio test pending.
 - Submix routing status: Not attempted.
 - UE sample rate: Unknown.
 - UE output channel count: Unknown.
@@ -164,16 +186,16 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Runtime params path: `RuntimeParams` and direct setters on `EngineSession`.
 - Render-buffer path: No public `EngineSession` host-pull render-buffer path found.
 - Device-owned fallback: `RealtimeBackend` opens and starts AlloLib `AudioIO`.
-- Build/link status: `EngineSessionCore` built successfully in the in-repo clone; Unreal link not attempted.
-- Main blocker: Need host-owned PCM render API or a deliberate wrapper before Unreal mixer routing can be real.
-- Next recommended step: Build the Unreal shell, then decide Spatial Root dependency strategy.
+- Build/link status: `EngineSessionCore` built successfully in the in-repo clone and linked into `SpatialRootHost`.
+- Main blocker: `EngineSession::start()` still opens AlloLib `AudioIO`; no public host-owned PCM render API exists.
+- Next recommended step: Create a minimal actor/Blueprint flow to set LUSID scene, ADM path, TransLab layout, start `EngineSession`, and observe device/channel-count behavior.
 
 ## Next Recommended Tasks
 
-1. Create a minimal level/actor or Blueprint binding for `USpatialRootTestToneComponent`.
-2. Wire Unreal Build Tool to the in-repo `EngineSessionCore` artifact and include paths.
-3. Implement the bridge lifecycle against `EngineSession` while keeping audio path mode honest.
-4. Locate a known-good ADM/BW64 plus LUSID scene plus layout JSON test pair.
+1. Create a minimal level/actor or Blueprint binding for `USpatialRootSubsystem`, `USpatialRootRenderBusComponent`, and `USpatialRootTestToneComponent`.
+2. Locate a known-good ADM/BW64 plus LUSID scene pair for the TransLab layout.
+3. Start `EngineSession` in editor and document whether AlloLib device startup succeeds or fails under Unreal.
+4. Query Unreal sample rate and output channel count for diagnostics.
 5. Keep the Spatial Root submodule pinned intentionally when updating the dependency.
 
 ## Do Not Repeat

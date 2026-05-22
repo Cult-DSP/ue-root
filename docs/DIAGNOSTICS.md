@@ -6,14 +6,18 @@
 
 - `bEngineInitialized`
 - `AdmPath`
+- `LusidScenePath`
 - `LayoutPath`
 - `bAdmLoaded`
+- `bLusidSceneLoaded`
 - `bLayoutLoaded`
 - `TransportState`
 - `UnrealSampleRate`
 - `UnrealOutputChannelCount`
 - `SpatialRootRequiredOutputChannelCount`
+- `SpatialRootInternalRenderBusChannelCount`
 - `RenderedChannelCount`
+- `UnrealRenderBusChannelCount`
 - `UnderrunCount`
 - `LastError`
 - `LastOperation`
@@ -27,9 +31,10 @@
 - `StubTestGeneratorOnly`
 - `FailedNotConnected`
 
-## Current Gaps
+## Current Status
+
+The bridge now parses the TransLab layout JSON and reports its 18-channel requirement before starting Spatial Root.
 
 Unreal sample rate and output channel count are not populated yet.
 
-Spatial Root required output channel count and rendered channel count are not populated until `EngineSessionCore` is linked and the layout path is available from the bridge.
-
+Spatial Root status polling currently captures underruns from `EngineSession::queryStatus()` after lifecycle actions. A regular diagnostics tick still needs to be added.

@@ -20,15 +20,16 @@ https://huggingface.co/datasets/lucianparisi/atmos-data/tree/main
 
 ## Current State
 
-This repository currently contains a minimal Unreal project shell and a `SpatialRootHost` runtime plugin skeleton.
+This repository currently contains a minimal Unreal project shell and a `SpatialRootHost` runtime plugin.
 
 The plugin has:
 
 - A minimal C++ module.
 - A `USpatialRootSubsystem` Blueprint-facing control surface.
-- A `USpatialRootBridge` stub with the intended Spatial Root lifecycle methods.
+- A `USpatialRootBridge` that links and calls Spatial Root `EngineSessionCore`.
 - A `FSpatialRootDiagnostics` model.
 - A `USpatialRootTestToneComponent` Unreal synth source for proving generated audio can enter Unreal independently of Spatial Root.
+- A `USpatialRootRenderBusComponent` 18-channel Unreal synth source for the intended internal render-bus handoff.
 
 Spatial Root is checked out inside this repository at:
 
@@ -71,14 +72,29 @@ Build:
 "/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh" UERootEditor Mac Development -project="/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject" -WaitMutex
 ```
 
+## TransLab Benchmark
+
+The first benchmark layout is:
+
+```text
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/speaker_layouts/translab-sono-layout.json
+```
+
+It contains 16 speakers plus 2 subwoofers, using channels `0` through `17`. The bridge reports this as an 18-channel Spatial Root output requirement and configures the Unreal render-bus component for the same channel count.
+
 ## Audio Routing Status
 
 Unreal-side generated audio is represented by a test-tone synth component.
 
-Spatial Root-rendered audio is not yet routed into Unreal. Current investigation found that Spatial Root realtime rendering is performed inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, reached from an AlloLib `AudioIO` callback opened by `EngineSession::start()`. No current public `EngineSession` host-pull method was found for rendering PCM blocks into a caller-provided Unreal buffer.
+Spatial Root `EngineSessionCore` is linked into the Unreal plugin and can be driven through the locked API. Current investigation found that Spatial Root realtime rendering is performed inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, reached from an AlloLib `AudioIO` callback opened by `EngineSession::start()`. No current public `EngineSession` host-pull method was found for rendering PCM blocks into a caller-provided Unreal buffer.
 
-Until that API exists or a suitable internal path is intentionally wrapped, the honest audio-path mode is:
+The desired Unreal route is now represented in code as:
 
 ```text
-stub/test generator only
+Spatial Root layout channel N
+Unreal render bus channel N
+Unreal source/submix/master
+Unreal-selected output device channel N
 ```
+
+That path is not receiving Spatial Root PCM yet. When `EngineSession::start()` is used today, the honest audio-path mode is still `Spatial Root owns device`.

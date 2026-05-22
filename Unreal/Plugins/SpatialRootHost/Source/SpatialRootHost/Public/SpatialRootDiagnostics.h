@@ -33,10 +33,16 @@ struct SPATIALROOTHOST_API FSpatialRootDiagnostics
     FString AdmPath;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
+    FString LusidScenePath;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     FString LayoutPath;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     bool bAdmLoaded = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
+    bool bLusidSceneLoaded = false;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     bool bLayoutLoaded = false;
@@ -54,7 +60,13 @@ struct SPATIALROOTHOST_API FSpatialRootDiagnostics
     int32 SpatialRootRequiredOutputChannelCount = 0;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
+    int32 SpatialRootInternalRenderBusChannelCount = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     int32 RenderedChannelCount = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
+    int32 UnrealRenderBusChannelCount = 0;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     int32 UnderrunCount = 0;
@@ -68,4 +80,3 @@ struct SPATIALROOTHOST_API FSpatialRootDiagnostics
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     ESpatialRootAudioPathMode AudioPathMode = ESpatialRootAudioPathMode::Unknown;
 };
-

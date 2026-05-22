@@ -5,6 +5,8 @@
 #include "SpatialRootDiagnostics.h"
 #include "SpatialRootBridge.generated.h"
 
+class EngineSession;
+
 UCLASS(BlueprintType)
 class SPATIALROOTHOST_API USpatialRootBridge : public UObject
 {
@@ -18,7 +20,13 @@ public:
     bool LoadAdmBwf(const FString& AdmPath);
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
+    bool LoadLusidScene(const FString& ScenePath);
+
+    UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     bool LoadLayout(const FString& LayoutPath);
+
+    UFUNCTION(BlueprintCallable, Category = "Spatial Root")
+    bool LoadTranslabLayout();
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     bool Start();
@@ -34,6 +42,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     void Shutdown();
+
+    UFUNCTION(BlueprintPure, Category = "Spatial Root")
+    FString GetDefaultTranslabLayoutPath() const;
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     void SetMasterGainDb(float Db);
@@ -54,13 +65,19 @@ public:
     FSpatialRootDiagnostics GetDiagnostics() const;
 
 private:
+    void BeginDestroy() override;
+
     void SetLastOperation(const FString& Operation);
     bool Fail(const FString& Operation, const FString& Error);
+    bool EnsureSession();
+    bool UpdateLayoutDiagnostics(const FString& LayoutPath);
+    void RefreshEngineStatus();
+    void ResetSession();
 
     FSpatialRootDiagnostics Diagnostics;
+    EngineSession* Session = nullptr;
     float MasterGainDb = 0.0f;
     float DbapFocus = 1.5f;
     float SpeakerMix = 0.0f;
     float SubMix = 0.0f;
 };
-
