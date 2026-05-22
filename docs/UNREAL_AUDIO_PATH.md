@@ -50,6 +50,8 @@ Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareD
 2. Add `USpatialRootRenderBusComponent` to an actor or simple Blueprint and configure it for 18 channels.
 3. Add `USpatialRootTestToneComponent` separately for an audible basic source sanity check.
 4. Start the components and confirm Unreal sample rate/output channel count if accessible.
-5. Start `EngineSession` with a LUSID scene, ADM file, and the TransLab layout.
-6. Enable the host bus path and confirm `renderHostBlock()` is feeding the render bus component.
-7. Document whether `EngineSession::start()` can run inside Unreal and which device/channel-count errors occur.
+5. Start `EngineSession` with a LUSID scene, ADM file, and the TransLab layout using `AudioOutputMode::InternalHostBus` and `prepareInternalHostBus()`.
+6. Confirm `renderHostBlock()` is feeding the render bus component via `USpatialRootBridge` with `bUseSpatialRootHostBus` enabled.
+7. Verify rendered audio exits Unreal's device at the expected channels and document any channel-count or sample-rate mismatches.
+
+The Internal Host Bus API (`renderHostBlock()`, `prepareInternalHostBus()`, `setAudioOutputMode()`) is implemented and documented in `spatialroot-embedding/internalDocs/HOST_RENDER_BACKEND.md`.
