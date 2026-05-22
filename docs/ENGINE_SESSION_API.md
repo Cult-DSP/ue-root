@@ -2,9 +2,9 @@
 
 ## Source Files
 
-- Public header: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/src/EngineSession.hpp`
-- Implementation: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/src/EngineSession.cpp`
-- Core CMake target: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/CMakeLists.txt`
+- Public header: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+- Implementation: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- Core CMake target: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/CMakeLists.txt`
 
 ## Construction
 
@@ -99,40 +99,43 @@ Spatializer::renderBlock(io, ...)
 hardware output
 ```
 
-## Render-Buffer Availability
-
-No public host-pull render-buffer method was found on `EngineSession`.
-
-The rendering function found is `Spatializer::renderBlock(al::AudioIOData& io, ...)`, called from `RealtimeBackend::processBlock()`. Its output target is AlloLib `AudioIOData`, owned by the AlloLib audio callback.
-
-## Missing API for Unreal Mixer Routing
-
-Unreal mixer routing needs a callable API shaped like:
-
-```cpp
-bool RenderNextBlock(float* InterleavedOutput, int32 NumFrames, int32 NumChannels);
-```
-
-or an equivalent planar-buffer API, where Unreal owns the destination buffer and Spatial Root does not open a hardware device.
-
-Current exact blocker:
+An Internal Host Bus path is now available:
 
 ```text
-No current host-pull render-buffer path found.
-Unreal mixer routing requires a future Spatial Root render-buffer API or a deliberate wrapper around the existing spatializer/streaming internals.
+setAudioOutputMode(AudioOutputMode::InternalHostBus)
+prepareInternalHostBus(HostBusConfig)
+renderHostBlock(interleaved buffer, frames, channels)
 ```
+
+## Render-Buffer Availability
+
+`EngineSession` now exposes a host-pull render-buffer method for interleaved output:
+
+```cpp
+int renderHostBlock(float* interleavedOutput, int numFrames, int numChannels);
+```
+
+The underlying render path remains `Spatializer::renderBlock(al::AudioIOData& io, ...)`, called from `RealtimeBackend::processBlock()`. For Internal Host Bus mode, `EngineSession::renderHostBlock()` invokes the same pipeline and copies the **internal render bus** into the host-provided interleaved buffer.
+
+## Unreal Mixer Routing Status
+
+Unreal mixer routing now has a callable host-owned PCM path via:
+
+```cpp
+int renderHostBlock(float* InterleavedOutput, int32 NumFrames, int32 NumChannels);
+```
+
+This path does **not** open a hardware device and is intended to feed `USpatialRootRenderBusComponent` (or another UE procedural source) once wiring is complete.
 
 ## In-Repo Checkout
 
 The current project dependency source is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
 ```
 
-It was cloned fresh from `/Users/lucian/projects/spatialroot`, checked out on `devel`, and initialized with recursive submodules.
-
-`SpatialRootHost` now links against the in-repo `EngineSessionCore` build artifact without modifying the Spatial Root submodule. The Unreal bridge includes `EngineSession.hpp` only in its `.cpp` implementation and treats the Spatial Root API as locked.
+`SpatialRootHost` links against the in-repo `EngineSessionCore` build artifact. The Unreal bridge includes `EngineSession.hpp` only in its `.cpp` implementation and treats the Spatial Root API as locked.
 
 Current Unreal call sequence:
 

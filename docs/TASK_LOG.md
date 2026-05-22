@@ -4,7 +4,7 @@
 
 The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked as a parent repo submodule under the plugin ThirdParty tree, on `devel` at `b786ef8`, with recursive submodules initialized.
 
-`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. Spatial Root source remains unchanged. The TransLab layout is the benchmark target, parsed as 18 output channels. A UE-side 18-channel render-bus synth component exists as the intended Unreal insertion point, but Spatial Root PCM is not feeding it yet.
+`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The Spatial Root submodule now includes an Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. A UE-side 18-channel render-bus synth component exists as the intended Unreal insertion point, but Spatial Root PCM is not feeding it yet.
 
 ## Confirmed Facts
 
@@ -60,6 +60,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Evidence: `EngineSession.hpp` exposes lifecycle, setters, status, diagnostics, and shutdown, but no render/process block method that writes into a host-provided buffer.
 - File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/src/EngineSession.hpp`
 
+- Fact: Internal Host Bus output mode was added to `EngineSession` for host-pull rendering.
+- Evidence: `EngineSession` now exposes `setAudioOutputMode`, `prepareInternalHostBus`, and `renderHostBlock` with interleaved PCM output.
+- File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+
 - Fact: `UERootEditor` builds successfully with the `SpatialRootHost` plugin skeleton.
 - Evidence: UnrealBuildTool completed 15 actions and linked `UnrealEditor-UERoot.dylib` and `UnrealEditor-SpatialRootHost.dylib`.
 - File or command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
@@ -96,9 +100,9 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 
 ## Blockers
 
-- Blocker: Spatial Root-rendered PCM cannot currently be claimed to enter Unreal's mixer.
-- Evidence: Current realtime path renders inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, reached from AlloLib `AudioIO`, and no `EngineSession` host-pull render method was found.
-- Possible workaround: Use `USpatialRootRenderBusComponent` as the Unreal-side internal render bus once a host-owned Spatial Root PCM render path exists. Until then, `EngineSession::start()` is device-owned through AlloLib.
+- Blocker: Spatial Root PCM is not wired into Unreal's mixer yet.
+- Evidence: The new Internal Host Bus API exists in `spatialroot-embedding`, but Unreal-side glue to call `renderHostBlock()` and push into `USpatialRootRenderBusComponent` has not been implemented.
+- Possible workaround: Use the new host-bus API in the Unreal bridge to feed `USpatialRootRenderBusComponent`, then route to a UE submix.
 
 ## Last Completed Tasks
 
@@ -138,6 +142,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Result: `USpatialRootRenderBusComponent` provides an 18-channel queued interleaved-float source for future Spatial Root PCM handoff.
 - Files changed: `SpatialRootRenderBusComponent.h`, `SpatialRootRenderBusComponent.cpp`
 
+- Task: Added Internal Host Bus host-pull API to Spatial Root.
+- Result: `EngineSession` can render interleaved PCM blocks without opening a hardware device. Host bus configuration and warnings are documented.
+- Files changed: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.*`, `RealtimeBackend.hpp`, `RealtimeTypes.hpp`, `Spatializer.hpp`, `Streaming.hpp`, `internalDocs/HOST_RENDER_BACKEND.md`
+
 ## Local Unreal Setup
 
 - Unreal path checked: `/Users/lucian/UE_5.7`
@@ -170,9 +178,9 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Submix routing status: Not attempted.
 - UE sample rate: Unknown.
 - UE output channel count: Unknown.
-- Spatial Root render-buffer path: No public host-pull path found.
-- Blocker: Spatial Root realtime path currently owns an AlloLib audio device.
-- Next step: Build plugin and verify generated Unreal audio.
+- Spatial Root render-buffer path: Internal Host Bus API now available.
+- Blocker: Unreal-side integration of `renderHostBlock()` not wired yet.
+- Next step: Build plugin, call `renderHostBlock()` from the Unreal bridge, and enqueue PCM into the render bus component.
 
 ## Spatial Root Investigation
 
@@ -184,11 +192,11 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - ADM/BW64 load path: `SceneInput::admFile` with `Streaming::loadSceneFromADM`, after LUSID scene load.
 - Layout load path: `LayoutInput::layoutPath` with `LayoutLoader::loadLayout`.
 - Runtime params path: `RuntimeParams` and direct setters on `EngineSession`.
-- Render-buffer path: No public `EngineSession` host-pull render-buffer path found.
-- Device-owned fallback: `RealtimeBackend` opens and starts AlloLib `AudioIO`.
+- Render-buffer path: Internal Host Bus API now available via `EngineSession::renderHostBlock()`.
+- Device-owned fallback: `RealtimeBackend` still opens and starts AlloLib `AudioIO` for HardwareDevice mode.
 - Build/link status: `EngineSessionCore` built successfully in the in-repo clone and linked into `SpatialRootHost`.
-- Main blocker: `EngineSession::start()` still opens AlloLib `AudioIO`; no public host-owned PCM render API exists.
-- Next recommended step: Create a minimal actor/Blueprint flow to set LUSID scene, ADM path, TransLab layout, start `EngineSession`, and observe device/channel-count behavior.
+- Main blocker: Unreal still needs to call `renderHostBlock()` and route PCM into its mixer.
+- Next recommended step: Create a minimal actor/Blueprint flow to set LUSID scene, ADM path, TransLab layout, then call `renderHostBlock()` on a timer or audio callback and feed the render-bus component.
 
 ## Next Recommended Tasks
 
