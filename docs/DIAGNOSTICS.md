@@ -20,6 +20,7 @@
 - `UnrealRenderBusChannelCount`
 - `UnderrunCount`
 - `LastError`
+- `LastWarning`
 - `LastOperation`
 - `AudioPathMode`
 

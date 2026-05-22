@@ -32,6 +32,9 @@ public:
     bool Start();
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
+    bool StartHostBus(int32 NumFrames, int32 NumChannels, int32 SampleRate);
+
+    UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     void Pause();
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
@@ -39,6 +42,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     void Stop();
+
+    UFUNCTION(BlueprintCallable, Category = "Spatial Root")
+    void StopHostBus();
 
     UFUNCTION(BlueprintCallable, Category = "Spatial Root")
     void Shutdown();
@@ -62,7 +68,13 @@ public:
     FString GetLastError() const;
 
     UFUNCTION(BlueprintPure, Category = "Spatial Root")
+    FString GetLastWarning() const;
+
+    UFUNCTION(BlueprintPure, Category = "Spatial Root")
     FSpatialRootDiagnostics GetDiagnostics() const;
+
+    bool RenderHostAudio(float* InterleavedOutput, int32 NumFrames, int32 NumChannels, int32 SampleRate);
+    void SetUnrealAudioFormat(int32 SampleRate, int32 NumChannels);
 
 private:
     void BeginDestroy() override;
@@ -70,6 +82,7 @@ private:
     void SetLastOperation(const FString& Operation);
     bool Fail(const FString& Operation, const FString& Error);
     bool EnsureSession();
+    bool EnsureHostBusPrepared(int32 NumFrames, int32 NumChannels, int32 SampleRate);
     bool UpdateLayoutDiagnostics(const FString& LayoutPath);
     void RefreshEngineStatus();
     void ResetSession();
@@ -80,4 +93,8 @@ private:
     float DbapFocus = 1.5f;
     float SpeakerMix = 0.0f;
     float SubMix = 0.0f;
+    bool bHostBusPrepared = false;
+    int32 HostBusFrames = 0;
+    int32 HostBusChannels = 0;
+    int32 HostBusSampleRate = 0;
 };

@@ -125,7 +125,7 @@ Unreal mixer routing now has a callable host-owned PCM path via:
 int renderHostBlock(float* InterleavedOutput, int32 NumFrames, int32 NumChannels);
 ```
 
-This path does **not** open a hardware device and is intended to feed `USpatialRootRenderBusComponent` (or another UE procedural source) once wiring is complete.
+This path does **not** open a hardware device and can feed `USpatialRootRenderBusComponent` (or another UE procedural source). Runtime validation inside the Unreal editor is still pending.
 
 ## In-Repo Checkout
 
@@ -155,7 +155,7 @@ Important: `EngineSession::start()` still constructs `RealtimeBackend`, which op
 The benchmark layout is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/speaker_layouts/translab-sono-layout.json
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/speaker_layouts/translab-sono-layout.json
 ```
 
 The layout has 16 speakers plus 2 subwoofers, channels `0` through `17`, for an 18-channel physical output bus. The bridge parses this layout in Unreal and reports:

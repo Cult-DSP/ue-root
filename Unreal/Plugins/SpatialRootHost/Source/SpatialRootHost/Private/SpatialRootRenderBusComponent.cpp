@@ -1,5 +1,6 @@
 #include "SpatialRootRenderBusComponent.h"
 
+#include "SpatialRootBridge.h"
 #include "SpatialRootHostModule.h"
 
 USpatialRootRenderBusComponent::USpatialRootRenderBusComponent(const FObjectInitializer& ObjectInitializer)
@@ -16,6 +17,10 @@ void USpatialRootRenderBusComponent::ConfigureRenderBus(int32 InChannelCount)
     RequestedChannelCount = FMath::Clamp(InChannelCount, 1, 64);
     ConfiguredChannelCount = RequestedChannelCount;
     NumChannels = ConfiguredChannelCount;
+    if (Bridge)
+    {
+        Bridge->SetUnrealAudioFormat(CachedSampleRate, ConfiguredChannelCount);
+    }
 }
 
 void USpatialRootRenderBusComponent::ClearQueuedAudio()
@@ -61,6 +66,10 @@ bool USpatialRootRenderBusComponent::Init(int32& SampleRate)
 {
     CachedSampleRate = SampleRate > 0 ? SampleRate : 48000;
     ConfigureRenderBus(RequestedChannelCount);
+    if (Bridge)
+    {
+        Bridge->SetUnrealAudioFormat(CachedSampleRate, ConfiguredChannelCount);
+    }
     UE_LOG(LogSpatialRootAudio, Log, TEXT("Spatial Root UE render bus initialized: %d channels at %d Hz."), ConfiguredChannelCount, CachedSampleRate);
     return true;
 }
@@ -73,6 +82,18 @@ int32 USpatialRootRenderBusComponent::OnGenerateAudio(float* OutAudio, int32 Num
     }
 
     FMemory::Memzero(OutAudio, NumSamples * sizeof(float));
+
+    if (bUseSpatialRootHostBus && Bridge)
+    {
+        const int32 Frames = ConfiguredChannelCount > 0 ? (NumSamples / ConfiguredChannelCount) : 0;
+        if (Frames > 0 && NumSamples == Frames * ConfiguredChannelCount)
+        {
+            if (Bridge->RenderHostAudio(OutAudio, Frames, ConfiguredChannelCount, CachedSampleRate))
+            {
+                return NumSamples;
+            }
+        }
+    }
 
     FScopeLock Lock(&QueueCriticalSection);
     const int32 SamplesToCopy = FMath::Min(NumSamples, InterleavedQueue.Num());

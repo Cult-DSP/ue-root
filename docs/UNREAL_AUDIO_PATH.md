@@ -13,7 +13,7 @@ Unreal output device
 
 The `SpatialRootHost` plugin includes `USpatialRootTestToneComponent`, a `USynthComponent`-based generated audio source. It is intended to verify that plugin-generated audio can enter Unreal's audio graph before Spatial Root-rendered samples are attempted.
 
-The plugin also includes `USpatialRootRenderBusComponent`, an 18-channel `USynthComponent` queue intended to act as the Unreal-side render-bus insertion point. It accepts interleaved float buffers through C++ and outputs queued samples through Unreal's generated-audio source path. When the queue is empty it outputs silence and increments an underrun counter.
+The plugin also includes `USpatialRootRenderBusComponent`, an 18-channel `USynthComponent` queue intended to act as the Unreal-side render-bus insertion point. It accepts interleaved float buffers through C++ and outputs queued samples through Unreal's generated-audio source path. When the queue is empty it outputs silence and increments an underrun counter. The component can also pull directly from the new Internal Host Bus API when `bUseSpatialRootHostBus` is enabled and a bridge reference is provided.
 
 For the TransLab benchmark, Spatial Root layout channels map directly to Unreal render-bus channels:
 
@@ -24,13 +24,14 @@ Unreal source/submix/master output
 hardware device channel N, if Unreal exposes the channel
 ```
 
-This mapping is only meaningful once Spatial Root can provide rendered PCM to the component. Current `EngineSessionCore` does not expose a public host-pull render call.
+This mapping is only meaningful once Spatial Root can provide rendered PCM to the component. `EngineSessionCore` now exposes `renderHostBlock()` for host-pull rendering, and `USpatialRootRenderBusComponent` can invoke it through `USpatialRootBridge` when configured.
 
 ## Current Audio Path Mode
 
 ```text
 UE procedural source, for the Unreal render bus component
 Spatial Root owns device, when EngineSession::start() is used
+UE procedural source + Internal Host Bus, when `bUseSpatialRootHostBus` is enabled and a bridge reference is set
 ```
 
 ## Spatial Root Dependency
@@ -38,10 +39,10 @@ Spatial Root owns device, when EngineSession::start() is used
 Spatial Root is checked out inside the plugin at:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
 ```
 
-Current Spatial Root realtime output is driven by AlloLib `AudioIO`. That is not the same as routing into Unreal's mixer. A submix or audio bus can route samples after they enter Unreal, but it cannot act as a hardware output device selected by Spatial Root.
+Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareDevice mode. Internal Host Bus mode keeps rendering in-process while allowing Unreal to own the final output device.
 
 ## Next Test
 
@@ -50,4 +51,5 @@ Current Spatial Root realtime output is driven by AlloLib `AudioIO`. That is not
 3. Add `USpatialRootTestToneComponent` separately for an audible basic source sanity check.
 4. Start the components and confirm Unreal sample rate/output channel count if accessible.
 5. Start `EngineSession` with a LUSID scene, ADM file, and the TransLab layout.
-6. Document whether `EngineSession::start()` can run inside Unreal and which device/channel-count errors occur.
+6. Enable the host bus path and confirm `renderHostBlock()` is feeding the render bus component.
+7. Document whether `EngineSession::start()` can run inside Unreal and which device/channel-count errors occur.

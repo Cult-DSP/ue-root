@@ -7,7 +7,7 @@ The v0.1 target is intentionally narrow:
 - macOS only.
 - Local-machine-only development.
 - Unreal Engine expected at `/Users/lucian/UE_5.7`.
-- Spatial Root checked out inside this repository at `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`.
+- Spatial Root checked out inside this repository at `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`.
 - ADM/BW64 input plus Spatial Root layout JSON.
 - No visualization.
 - No cross-platform packaging.
@@ -34,7 +34,7 @@ The plugin has:
 Spatial Root is checked out inside this repository at:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
 ```
 
 That checkout is currently on `devel` at commit `b786ef8`, with submodules initialized recursively.
@@ -42,8 +42,8 @@ That checkout is currently on `devel` at commit `b786ef8`, with submodules initi
 The realtime engine has been built from that in-repo checkout. Key local artifacts:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/build/spatial_engine/realtimeEngine/libEngineSessionCore.a
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/build/spatial_engine/realtimeEngine/spatialroot_realtime
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/build/source/spatial_engine/realtimeEngine/libEngineSessionCore.a
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/build/source/spatial_engine/realtimeEngine/spatialroot_realtime
 ```
 
 ## Open in Unreal
@@ -77,7 +77,7 @@ Build:
 The first benchmark layout is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/speaker_layouts/translab-sono-layout.json
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/speaker_layouts/translab-sono-layout.json
 ```
 
 It contains 16 speakers plus 2 subwoofers, using channels `0` through `17`. The bridge reports this as an 18-channel Spatial Root output requirement and configures the Unreal render-bus component for the same channel count.
@@ -86,7 +86,7 @@ It contains 16 speakers plus 2 subwoofers, using channels `0` through `17`. The 
 
 Unreal-side generated audio is represented by a test-tone synth component.
 
-Spatial Root `EngineSessionCore` is linked into the Unreal plugin and can be driven through the locked API. Current investigation found that Spatial Root realtime rendering is performed inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, reached from an AlloLib `AudioIO` callback opened by `EngineSession::start()`. No current public `EngineSession` host-pull method was found for rendering PCM blocks into a caller-provided Unreal buffer.
+Spatial Root `EngineSessionCore` is linked into the Unreal plugin and can be driven through the locked API. The realtime render path still lives inside `RealtimeBackend::processBlock(al::AudioIOData& io)`, but an Internal Host Bus API now exists to render interleaved PCM blocks into Unreal-owned buffers without opening a hardware device.
 
 The desired Unreal route is now represented in code as:
 
@@ -97,4 +97,4 @@ Unreal source/submix/master
 Unreal-selected output device channel N
 ```
 
-That path is not receiving Spatial Root PCM yet. When `EngineSession::start()` is used today, the honest audio-path mode is still `Spatial Root owns device`.
+That path is now available through the host-bus API; the Unreal bridge can invoke `renderHostBlock()` when `bUseSpatialRootHostBus` is enabled, but runtime verification is still pending.

@@ -4,6 +4,8 @@
 #include "Components/SynthComponent.h"
 #include "SpatialRootRenderBusComponent.generated.h"
 
+class USpatialRootBridge;
+
 UCLASS(ClassGroup = "Audio", Blueprintable, meta = (BlueprintSpawnableComponent))
 class SPATIALROOTHOST_API USpatialRootRenderBusComponent : public USynthComponent
 {
@@ -14,6 +16,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spatial Root|Audio", meta = (ClampMin = "1", ClampMax = "64"))
     int32 RequestedChannelCount = 18;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spatial Root|Audio")
+    bool bUseSpatialRootHostBus = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spatial Root|Audio")
+    TObjectPtr<USpatialRootBridge> Bridge;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spatial Root|Audio")
     bool bOutputSilenceWhenEmpty = true;

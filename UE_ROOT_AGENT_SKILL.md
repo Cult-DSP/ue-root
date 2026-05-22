@@ -225,7 +225,7 @@ The agent should not assume Spatial Root is vendored into `ue-root`.
 Check for one of:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
 ThirdParty/SpatialRoot
 spatialroot
 ../spatialroot

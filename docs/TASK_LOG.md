@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked as a parent repo submodule under the plugin ThirdParty tree, on `devel` at `b786ef8`, with recursive submodules initialized.
+The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked under `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding` (branch `devel`), with recursive submodules initialized.
 
-`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The Spatial Root submodule now includes an Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. A UE-side 18-channel render-bus synth component exists as the intended Unreal insertion point, but Spatial Root PCM is not feeding it yet.
+`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The Spatial Root submodule now includes an Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. `USpatialRootRenderBusComponent` can now pull from the host bus via `USpatialRootBridge`, but this flow still needs in-editor runtime verification.
 
 ## Confirmed Facts
 
@@ -100,9 +100,9 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 
 ## Blockers
 
-- Blocker: Spatial Root PCM is not wired into Unreal's mixer yet.
-- Evidence: The new Internal Host Bus API exists in `spatialroot-embedding`, but Unreal-side glue to call `renderHostBlock()` and push into `USpatialRootRenderBusComponent` has not been implemented.
-- Possible workaround: Use the new host-bus API in the Unreal bridge to feed `USpatialRootRenderBusComponent`, then route to a UE submix.
+- Blocker: Host-bus audio path still needs runtime validation in the Unreal editor.
+- Evidence: `USpatialRootRenderBusComponent` now calls `renderHostBlock()` through `USpatialRootBridge`, but no in-editor run has been documented yet.
+- Possible workaround: Run a minimal Blueprint with `bUseSpatialRootHostBus` enabled and confirm audio output plus diagnostics.
 
 ## Last Completed Tasks
 
@@ -146,6 +146,14 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Result: `EngineSession` can render interleaved PCM blocks without opening a hardware device. Host bus configuration and warnings are documented.
 - Files changed: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.*`, `RealtimeBackend.hpp`, `RealtimeTypes.hpp`, `Spatializer.hpp`, `Streaming.hpp`, `internalDocs/HOST_RENDER_BACKEND.md`
 
+- Task: Wired Unreal render bus to host-pull PCM.
+- Result: `USpatialRootRenderBusComponent` can call `renderHostBlock()` through `USpatialRootBridge` when `bUseSpatialRootHostBus` is enabled; diagnostics now capture last warnings.
+- Files changed: `SpatialRootBridge.h`, `SpatialRootBridge.cpp`, `SpatialRootRenderBusComponent.h`, `SpatialRootRenderBusComponent.cpp`, `SpatialRootDiagnostics.h`, docs updates
+
+- Task: Rebuilt `UERootEditor` after spatialroot-embedding path updates.
+- Result: Unreal build succeeds with the updated include/library paths.
+- Files changed: `SpatialRootHost.Build.cs`
+
 ## Local Unreal Setup
 
 - Unreal path checked: `/Users/lucian/UE_5.7`
@@ -155,8 +163,8 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Build command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
 - Build result: Succeeded.
 - Plugin status: Compiles with `EngineSessionCore` linked.
-- Spatial Root dependency status: In-repo clone found and built; not linked into Unreal plugin yet.
-- In-repo Spatial Root checkout: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, branch `devel`, commit `b786ef8`, recursive submodules initialized.
+- Spatial Root dependency status: In-repo clone found and built; linked into the Unreal plugin.
+- In-repo Spatial Root checkout: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`, branch `devel`, commit `b786ef8`, recursive submodules initialized.
 - Audio test status: Test-tone synth and render-bus synth components compile; not yet run/auditioned in editor.
 - Next step: Add a minimal level/actor or Blueprint to instantiate the test tone and expose bridge diagnostics.
 
@@ -179,12 +187,12 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - UE sample rate: Unknown.
 - UE output channel count: Unknown.
 - Spatial Root render-buffer path: Internal Host Bus API now available.
-- Blocker: Unreal-side integration of `renderHostBlock()` not wired yet.
-- Next step: Build plugin, call `renderHostBlock()` from the Unreal bridge, and enqueue PCM into the render bus component.
+- Blocker: Unreal runtime validation still pending (host bus path not auditioned in editor yet).
+- Next step: Build plugin, enable host bus in `USpatialRootRenderBusComponent`, and verify `renderHostBlock()` output in-editor.
 
 ## Spatial Root Investigation
 
-- Spatial Root path: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`
+- Spatial Root path: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`
 - Branch: `devel`
 - Commit: `b786ef8`
 - EngineSession found: Yes
@@ -195,8 +203,8 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Render-buffer path: Internal Host Bus API now available via `EngineSession::renderHostBlock()`.
 - Device-owned fallback: `RealtimeBackend` still opens and starts AlloLib `AudioIO` for HardwareDevice mode.
 - Build/link status: `EngineSessionCore` built successfully in the in-repo clone and linked into `SpatialRootHost`.
-- Main blocker: Unreal still needs to call `renderHostBlock()` and route PCM into its mixer.
-- Next recommended step: Create a minimal actor/Blueprint flow to set LUSID scene, ADM path, TransLab layout, then call `renderHostBlock()` on a timer or audio callback and feed the render-bus component.
+- Main blocker: Unreal host-bus path still needs runtime verification and UE audio routing confirmation.
+- Next recommended step: Create a minimal actor/Blueprint flow to set LUSID scene, ADM path, TransLab layout, enable `bUseSpatialRootHostBus`, and confirm `renderHostBlock()` drives `USpatialRootRenderBusComponent`.
 
 ## Next Recommended Tasks
 

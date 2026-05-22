@@ -75,6 +75,9 @@ struct SPATIALROOTHOST_API FSpatialRootDiagnostics
     FString LastError;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
+    FString LastWarning;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")
     FString LastOperation;
 
     UPROPERTY(BlueprintReadOnly, Category = "Spatial Root")

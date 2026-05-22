@@ -22,7 +22,7 @@ FString SpatialRootCheckoutRoot()
 {
     return FPaths::ConvertRelativePathToFull(FPaths::Combine(
         FPaths::ProjectDir(),
-        TEXT("Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot")));
+    TEXT("Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding")));
 }
 }
 
@@ -46,6 +46,7 @@ bool USpatialRootBridge::Initialize()
 
     Diagnostics.bEngineInitialized = true;
     Diagnostics.LastError.Reset();
+    Diagnostics.LastWarning.Reset();
     return true;
 }
 
@@ -97,6 +98,7 @@ bool USpatialRootBridge::Start()
 {
     SetLastOperation(TEXT("Start"));
     Diagnostics.TransportState = ESpatialRootTransportState::Stopped;
+    bHostBusPrepared = false;
 
     if (!EnsureSession())
     {
@@ -132,6 +134,11 @@ bool USpatialRootBridge::Start()
         return Fail(TEXT("configureEngine"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
     }
 
+    if (!Session->setAudioOutputMode(AudioOutputMode::HardwareDevice))
+    {
+        return Fail(TEXT("setAudioOutputMode"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+
     SceneInput Scene;
     Scene.scenePath = TCHAR_TO_UTF8(*Diagnostics.LusidScenePath);
     Scene.admFile = TCHAR_TO_UTF8(*Diagnostics.AdmPath);
@@ -155,7 +162,7 @@ bool USpatialRootBridge::Start()
     UpdateLayoutDiagnostics(Diagnostics.LayoutPath);
 
     RuntimeParams Params;
-    Params.masterGain = FMath::Pow(10.0f, MasterGainDb / 20.0f);
+    Params.masterGainDb = MasterGainDb;
     Params.dbapFocus = DbapFocus;
     Params.speakerMixDb = SpeakerMix;
     Params.subMixDb = SubMix;
@@ -172,11 +179,118 @@ bool USpatialRootBridge::Start()
 
     Diagnostics.TransportState = ESpatialRootTransportState::Running;
     Diagnostics.AudioPathMode = ESpatialRootAudioPathMode::SpatialRootOwnsDevice;
-    Diagnostics.LastError = TEXT("EngineSession started. Current Spatial Root API owns its AlloLib device; Unreal render bus is not receiving Spatial Root PCM yet.");
+    Diagnostics.LastError = TEXT("EngineSession started. Spatial Root owns its AlloLib device; Unreal render bus is not receiving Spatial Root PCM in this mode.");
+    Diagnostics.LastWarning.Reset();
     RefreshEngineStatus();
     return true;
 #else
     return Fail(TEXT("Start"), TEXT("EngineSessionCore static library has not been built or linked. Run Spatial Root build.sh --engine-only inside the submodule."));
+#endif
+}
+
+bool USpatialRootBridge::StartHostBus(int32 NumFrames, int32 NumChannels, int32 SampleRate)
+{
+    SetLastOperation(TEXT("StartHostBus"));
+    Diagnostics.TransportState = ESpatialRootTransportState::Stopped;
+
+    if (!EnsureSession())
+    {
+        return false;
+    }
+
+    if (Diagnostics.LusidScenePath.IsEmpty())
+    {
+        return Fail(TEXT("StartHostBus"), TEXT("EngineSession requires a LUSID scene path before ADM direct streaming can start."));
+    }
+    if (Diagnostics.AdmPath.IsEmpty())
+    {
+        return Fail(TEXT("StartHostBus"), TEXT("ADM/BW64 path is empty."));
+    }
+    if (Diagnostics.LayoutPath.IsEmpty())
+    {
+        return Fail(TEXT("StartHostBus"), TEXT("Layout path is empty."));
+    }
+    if (NumFrames <= 0 || NumChannels <= 0 || SampleRate <= 0)
+    {
+        return Fail(TEXT("StartHostBus"), TEXT("Host bus requires valid frame count, channel count, and sample rate."));
+    }
+
+#if SPATIALROOT_WITH_ENGINESESSION
+    ResetSession();
+    if (!EnsureSession())
+    {
+        return false;
+    }
+
+    EngineOptions Options;
+    Options.sampleRate = SampleRate;
+    Options.bufferSize = NumFrames;
+    Options.oscPort = 0;
+    if (!Session->configureEngine(Options))
+    {
+        return Fail(TEXT("configureEngine"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+
+    SceneInput Scene;
+    Scene.scenePath = TCHAR_TO_UTF8(*Diagnostics.LusidScenePath);
+    Scene.admFile = TCHAR_TO_UTF8(*Diagnostics.AdmPath);
+    if (!Session->loadScene(Scene))
+    {
+        Diagnostics.bAdmLoaded = false;
+        Diagnostics.bLusidSceneLoaded = false;
+        return Fail(TEXT("loadScene"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+    Diagnostics.bAdmLoaded = true;
+    Diagnostics.bLusidSceneLoaded = true;
+
+    LayoutInput Layout;
+    Layout.layoutPath = TCHAR_TO_UTF8(*Diagnostics.LayoutPath);
+    if (!Session->applyLayout(Layout))
+    {
+        Diagnostics.bLayoutLoaded = false;
+        return Fail(TEXT("applyLayout"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+    Diagnostics.bLayoutLoaded = true;
+    UpdateLayoutDiagnostics(Diagnostics.LayoutPath);
+
+    RuntimeParams Params;
+    Params.masterGainDb = MasterGainDb;
+    Params.dbapFocus = DbapFocus;
+    Params.speakerMixDb = SpeakerMix;
+    Params.subMixDb = SubMix;
+    if (!Session->configureRuntime(Params))
+    {
+        return Fail(TEXT("configureRuntime"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+
+    if (!Session->setAudioOutputMode(AudioOutputMode::InternalHostBus))
+    {
+        return Fail(TEXT("setAudioOutputMode"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+
+    HostBusConfig HostConfig;
+    HostConfig.sampleRate = SampleRate;
+    HostConfig.blockSize = NumFrames;
+    HostConfig.outputChannels = NumChannels;
+    HostConfig.interleaved = true;
+    if (!Session->prepareInternalHostBus(HostConfig))
+    {
+        return Fail(TEXT("prepareInternalHostBus"), UTF8_TO_TCHAR(Session->getLastError().c_str()));
+    }
+
+    bHostBusPrepared = true;
+    HostBusFrames = NumFrames;
+    HostBusChannels = NumChannels;
+    HostBusSampleRate = SampleRate;
+
+    Diagnostics.TransportState = ESpatialRootTransportState::Running;
+    Diagnostics.AudioPathMode = ESpatialRootAudioPathMode::UEProceduralSource;
+    Diagnostics.LastError.Reset();
+    Diagnostics.LastWarning = UTF8_TO_TCHAR(Session->getLastWarning().c_str());
+    RefreshEngineStatus();
+    return true;
+#else
+    return Fail(TEXT("StartHostBus"), TEXT("EngineSessionCore static library has not been built or linked. Run Spatial Root build.sh --engine-only inside the submodule."));
 #endif
 }
 
@@ -212,10 +326,29 @@ void USpatialRootBridge::Stop()
 #if SPATIALROOT_WITH_ENGINESESSION
     if (Session)
     {
+        Session->shutdownInternalHostBus();
         Session->shutdown();
     }
 #endif
+    bHostBusPrepared = false;
     Diagnostics.TransportState = ESpatialRootTransportState::Stopped;
+    Diagnostics.LastWarning.Reset();
+    RefreshEngineStatus();
+}
+
+void USpatialRootBridge::StopHostBus()
+{
+    SetLastOperation(TEXT("StopHostBus"));
+#if SPATIALROOT_WITH_ENGINESESSION
+    if (Session)
+    {
+        Session->shutdownInternalHostBus();
+    }
+#endif
+    bHostBusPrepared = false;
+    Diagnostics.TransportState = ESpatialRootTransportState::Stopped;
+    Diagnostics.AudioPathMode = ESpatialRootAudioPathMode::UEProceduralSource;
+    Diagnostics.LastWarning.Reset();
     RefreshEngineStatus();
 }
 
@@ -225,13 +358,17 @@ void USpatialRootBridge::Shutdown()
 #if SPATIALROOT_WITH_ENGINESESSION
     if (Session)
     {
+        Session->shutdownInternalHostBus();
         Session->shutdown();
     }
 #endif
+#if SPATIALROOT_WITH_ENGINESESSION
     delete Session;
+#endif
     Session = nullptr;
     Diagnostics.bEngineInitialized = false;
     Diagnostics.TransportState = ESpatialRootTransportState::Stopped;
+    bHostBusPrepared = false;
 }
 
 FString USpatialRootBridge::GetDefaultTranslabLayoutPath() const
@@ -248,7 +385,7 @@ void USpatialRootBridge::SetMasterGainDb(float Db)
 #if SPATIALROOT_WITH_ENGINESESSION
     if (Session)
     {
-        Session->setMasterGain(FMath::Pow(10.0f, MasterGainDb / 20.0f));
+        Session->setMasterGainDb(MasterGainDb);
     }
 #endif
 }
@@ -294,9 +431,47 @@ FString USpatialRootBridge::GetLastError() const
     return Diagnostics.LastError;
 }
 
+FString USpatialRootBridge::GetLastWarning() const
+{
+    return Diagnostics.LastWarning;
+}
+
 FSpatialRootDiagnostics USpatialRootBridge::GetDiagnostics() const
 {
     return Diagnostics;
+}
+
+bool USpatialRootBridge::RenderHostAudio(float* InterleavedOutput, int32 NumFrames, int32 NumChannels, int32 SampleRate)
+{
+#if SPATIALROOT_WITH_ENGINESESSION
+    if (!EnsureHostBusPrepared(NumFrames, NumChannels, SampleRate))
+    {
+        if (InterleavedOutput && NumFrames > 0 && NumChannels > 0)
+        {
+            FMemory::Memzero(InterleavedOutput, sizeof(float) * NumFrames * NumChannels);
+        }
+        return false;
+    }
+
+    const int32 RenderedFrames = Session ? Session->renderHostBlock(InterleavedOutput, NumFrames, NumChannels) : 0;
+    if (RenderedFrames <= 0)
+    {
+        return false;
+    }
+
+    Diagnostics.RenderedChannelCount = NumChannels;
+    Diagnostics.LastWarning = Session ? UTF8_TO_TCHAR(Session->getLastWarning().c_str()) : FString();
+    Diagnostics.LastError = Session ? UTF8_TO_TCHAR(Session->getLastError().c_str()) : FString();
+    return true;
+#else
+    return false;
+#endif
+}
+
+void USpatialRootBridge::SetUnrealAudioFormat(int32 SampleRate, int32 NumChannels)
+{
+    Diagnostics.UnrealSampleRate = SampleRate;
+    Diagnostics.UnrealOutputChannelCount = NumChannels;
 }
 
 void USpatialRootBridge::SetLastOperation(const FString& Operation)
@@ -308,6 +483,7 @@ bool USpatialRootBridge::Fail(const FString& Operation, const FString& Error)
 {
     Diagnostics.LastOperation = Operation;
     Diagnostics.LastError = Error.IsEmpty() ? TEXT("Unknown Spatial Root error.") : Error;
+    Diagnostics.LastWarning.Reset();
     Diagnostics.AudioPathMode = ESpatialRootAudioPathMode::FailedNotConnected;
     UE_LOG(LogSpatialRootHost, Warning, TEXT("%s failed: %s"), *Operation, *Diagnostics.LastError);
     return false;
@@ -329,6 +505,29 @@ bool USpatialRootBridge::EnsureSession()
     return true;
 #else
     return Fail(TEXT("EnsureSession"), TEXT("SPATIALROOT_WITH_ENGINESESSION is disabled because EngineSessionCore was not found at build time."));
+#endif
+}
+
+bool USpatialRootBridge::EnsureHostBusPrepared(int32 NumFrames, int32 NumChannels, int32 SampleRate)
+{
+#if SPATIALROOT_WITH_ENGINESESSION
+    if (!Session)
+    {
+        if (!EnsureSession())
+        {
+            return false;
+        }
+    }
+
+    if (!bHostBusPrepared || HostBusFrames != NumFrames || HostBusChannels != NumChannels || HostBusSampleRate != SampleRate)
+    {
+        bHostBusPrepared = false;
+        return StartHostBus(NumFrames, NumChannels, SampleRate);
+    }
+
+    return true;
+#else
+    return false;
 #endif
 }
 
@@ -415,6 +614,7 @@ void USpatialRootBridge::RefreshEngineStatus()
     Diagnostics.TransportState = Status.paused
         ? ESpatialRootTransportState::Paused
         : Diagnostics.TransportState;
+    Diagnostics.LastWarning = UTF8_TO_TCHAR(Session->getLastWarning().c_str());
 #endif
 }
 
