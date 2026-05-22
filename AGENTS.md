@@ -6,6 +6,10 @@ This file defines working instructions for autonomous agents contributing to `ue
 
 The first milestone is intentionally narrow: macOS-only, local-machine-only, ADM/BW64 input only, no visualization, and no production packaging.
 
+Before local Unreal implementation work, read `docs/UE_ROOT_AGENT_SKILL.md`. Use `/Users/lucian/UE_5.7` as the preferred Unreal Engine path and `/Users/lucian/projects/spatialroot/sourceData` as the preferred local test-data path. Document any deviation in `docs/TASK_LOG.md`.
+
+Before Spatial Root integration work, read `docs/SPATIAL_ROOT_AGENT_SKILL.md`. Treat the Spatial Root source as the source of truth, use `/Users/lucian/projects/spatialroot` as the preferred local repo path, and document all EngineSession, ADM/BW64, layout, runtime, and render-buffer findings in `docs/ENGINE_SESSION_API.md` and `docs/TASK_LOG.md`.
+
 ## Project Intent
 
 The goal is to prove that Unreal can host Spatial Root as an embedded spatial audio runtime.
@@ -205,7 +209,7 @@ Agents must maintain a lightweight project memory.
 
 Use this format in `docs/TASK_LOG.md`. If the file does not exist, create it.
 
-````markdown
+```markdown
 # Task Log
 
 ## Current State
@@ -247,7 +251,7 @@ Short summary of what currently works.
 - Failed attempt:
 - Why it failed:
 - What to do instead:
-````
+```
 
 Update `docs/TASK_LOG.md` at the end of every meaningful work session.
 
