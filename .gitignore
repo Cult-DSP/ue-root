@@ -1,0 +1,19 @@
+# Unreal generated state
+Unreal/Binaries/
+Unreal/DerivedDataCache/
+Unreal/Intermediate/
+Unreal/Saved/
+Unreal/.vs/
+Unreal/.idea/
+Unreal/*.sln
+Unreal/*.xcworkspace
+Unreal/*.xcodeproj
+
+# Plugin generated state
+Unreal/Plugins/*/Binaries/
+Unreal/Plugins/*/Intermediate/
+Unreal/Plugins/*/Saved/
+
+# macOS/editor noise
+.DS_Store
+

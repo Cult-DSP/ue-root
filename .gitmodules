@@ -1,0 +1,4 @@
+[submodule "Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot"]
+	path = Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+	url = https://github.com/Cult-DSP/spatialroot.git
+	branch = devel

@@ -1,0 +1,20 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.7",
+  "Category": "Audio",
+  "Description": "Experimental Unreal host for Spatial Root.",
+  "Modules": [
+    {
+      "Name": "UERoot",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "SpatialRootHost",
+      "Enabled": true
+    }
+  ]
+}
+

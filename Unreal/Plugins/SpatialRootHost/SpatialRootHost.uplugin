@@ -1,0 +1,20 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Spatial Root Host",
+  "Description": "Experimental bridge for embedding Spatial Root in Unreal.",
+  "Category": "Audio",
+  "CreatedBy": "Cult DSP",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "SpatialRootHost",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
+
