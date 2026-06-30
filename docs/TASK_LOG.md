@@ -4,7 +4,7 @@
 
 The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked as a submodule under `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, pointed at the canonical Cult-DSP `host-render` branch.
 
-`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The canonical Spatial Root `host-render` branch includes the Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. `USpatialRootRenderBusComponent` can pull from the host bus via `USpatialRootBridge`, but this flow still needs in-editor runtime verification after the dependency repoint.
+`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The canonical Spatial Root `host-render` branch includes the Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. `USpatialRootRenderBusComponent` can pull from the host bus via `USpatialRootBridge`, but this flow still needs in-editor runtime verification after the dependency repoint. No `Unreal/Content` directory exists yet, so the level, UI, and Blueprint/actor binding layer is still pending.
 
 ## Confirmed Facts
 
@@ -68,6 +68,14 @@ The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` an
 - Evidence: UnrealBuildTool completed 15 actions and linked `UnrealEditor-UERoot.dylib` and `UnrealEditor-SpatialRootHost.dylib`.
 - File or command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
 
+- Fact: `UERootEditor` still builds after onboarding verification.
+- Evidence: UnrealBuildTool completed two actions and linked `UnrealEditor-SpatialRootHost.dylib`.
+- File or command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
+
+- Fact: The required Unreal content/UI layer is not present yet.
+- Evidence: `Unreal/Content` does not exist.
+- File or command: `find Unreal/Content -maxdepth 5 -type f`
+
 - Fact: Spatial Root realtime engine builds successfully from the in-repo clone.
 - Evidence: Build completed and produced `libEngineSessionCore.a` plus `spatialroot_realtime`.
 - File or command: `./build.sh --engine-only`
@@ -99,6 +107,10 @@ The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` an
 - Blocker: Host-bus audio path still needs runtime validation in the Unreal editor.
 - Evidence: `USpatialRootRenderBusComponent` now calls `renderHostBlock()` through `USpatialRootBridge`, but no in-editor run has been documented yet.
 - Possible workaround: Run a minimal Blueprint with `bUseSpatialRootHostBus` enabled and confirm audio output plus diagnostics.
+
+- Blocker: No map, actor, Blueprint, or UMG control surface exists in `Unreal/Content` yet.
+- Evidence: The content directory is absent, while `AGENTS.md` requires a simple control panel and diagnostics window.
+- Possible workaround: Add a small C++ actor first to bind the bridge and synth components, then layer UMG on top once runtime audio is verified.
 
 ## Last Completed Tasks
 
@@ -153,6 +165,10 @@ The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` an
 - Task: Rebuilt `UERootEditor` after SpatialRoot/spatialroot path updates.
 - Result: Unreal build succeeds with the updated include/library paths.
 - Files changed: `SpatialRootHost.Build.cs`
+
+- Task: Onboarded against `AGENTS.md` and refreshed remaining-task state.
+- Result: Verified the repo shell, plugin, Spatial Root submodule pin, preferred Unreal path, preferred source-data path, missing `Unreal/Content`, and a successful `UERootEditor` build.
+- Files changed: `docs/TASK_LOG.md`
 
 ## Local Unreal Setup
 
@@ -209,11 +225,12 @@ The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` an
 
 ## Next Recommended Tasks
 
-1. Create a minimal level/actor or Blueprint binding for `USpatialRootSubsystem`, `USpatialRootRenderBusComponent`, and `USpatialRootTestToneComponent`.
-2. Locate a known-good ADM/BW64 plus LUSID scene pair for the TransLab layout.
-3. Start `EngineSession` in editor and document whether AlloLib device startup succeeds or fails under Unreal.
-4. Query Unreal sample rate and output channel count for diagnostics.
-5. Keep the Spatial Root submodule pinned intentionally when updating the dependency.
+1. Add a minimal runtime actor or Blueprint binding that creates/uses `USpatialRootSubsystem`, assigns its bridge to `USpatialRootRenderBusComponent`, enables `bUseSpatialRootHostBus`, and can start/stop the test tone and host-bus source.
+2. Create the initial `Unreal/Content` structure with a minimal map and a basic UMG/control-panel placeholder for ADM path, LUSID scene path, layout path, transport buttons, runtime controls, and diagnostics.
+3. Locate and document a known-good ADM/BW64 plus LUSID scene pair for the first Unreal host-bus test; keep TransLab as the selected benchmark layout unless testing proves a smaller layout is needed first.
+4. Run the editor with the minimal actor/UI flow and verify whether `renderHostBlock()` produces audible output through Unreal's synth/procedural path.
+5. Query Unreal sample rate and output channel count for diagnostics, then document any mismatch between requested 18-channel output and the actual device/mixer output.
+6. Keep the Spatial Root submodule pinned intentionally when updating the dependency.
 
 ## Do Not Repeat
 
