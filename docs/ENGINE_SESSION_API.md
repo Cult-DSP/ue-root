@@ -2,9 +2,11 @@
 
 ## Source Files
 
-- Public header: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
-- Implementation: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
-- Core CMake target: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/CMakeLists.txt`
+- Public header: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+- Implementation: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- Core CMake target: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/realtimeEngine/CMakeLists.txt`
+- Canonical repo and branch: `https://github.com/Cult-DSP/spatialroot/tree/host-render`
+- Current in-repo pin: `4e04d37`
 
 ## Construction
 
@@ -132,12 +134,12 @@ This path does **not** open a hardware device and can feed `USpatialRootRenderBu
 The current project dependency source is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
 ```
 
 `SpatialRootHost` links against the in-repo `EngineSessionCore` build artifact. The Unreal bridge includes `EngineSession.hpp` only in its `.cpp` implementation and treats the Spatial Root API as locked.
 
-Current Unreal call sequence:
+Current hardware-device fallback call sequence:
 
 ```text
 USpatialRootBridge::Start()
@@ -150,12 +152,28 @@ start()
 
 Important: `EngineSession::start()` still constructs `RealtimeBackend`, which opens AlloLib `AudioIO`. This proves Unreal can drive the `EngineSessionCore` lifecycle, but it is not Unreal mixer-native Spatial Root playback.
 
+Current Unreal-owned host-bus call sequence:
+
+```text
+USpatialRootBridge::StartHostBus()
+configureEngine(oscPort = 0, host sample rate, host frames)
+loadScene(scenePath + admFile)
+applyLayout(layoutPath)
+configureRuntime(master gain, DBAP focus, speaker mix, sub mix)
+setAudioOutputMode(AudioOutputMode::InternalHostBus)
+prepareInternalHostBus(host frames + channels)
+USpatialRootRenderBusComponent::OnGenerateAudio()
+renderHostBlock(interleaved output, frames, channels)
+```
+
+Important: `StartHostBus()` does not call `EngineSession::start()`. Internal Host Bus mode is the preferred Unreal-owned output path because it lets Unreal own the hardware device.
+
 ## TransLab Benchmark Layout
 
 The benchmark layout is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/speaker_layouts/translab-sono-layout.json
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/speaker_layouts/translab-sono-layout.json
 ```
 
 The layout has 16 speakers plus 2 subwoofers, channels `0` through `17`, for an 18-channel physical output bus. The bridge parses this layout in Unreal and reports:
@@ -167,5 +185,5 @@ The layout has 16 speakers plus 2 subwoofers, channels `0` through `17`, for an 
 ## Open Questions
 
 - Which LUSID scene should pair with each ADM/BW64 file for the first Unreal test?
-- Can `EngineSessionCore` start successfully inside the Unreal editor process with the current AlloLib backend and available output device?
-- Should the in-repo Spatial Root checkout be tracked as a git submodule by `ue-root`, or remain a local nested clone used for development builds?
+- Which LUSID scene should pair with each ADM/BW64 file for the first Unreal test?
+- Can `USpatialRootRenderBusComponent` be auditioned in the editor with `bUseSpatialRootHostBus` enabled?

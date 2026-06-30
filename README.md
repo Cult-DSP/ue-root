@@ -7,7 +7,8 @@ The v0.1 target is intentionally narrow:
 - macOS only.
 - Local-machine-only development.
 - Unreal Engine expected at `/Users/lucian/UE_5.7`.
-- Spatial Root checked out inside this repository at `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`.
+- Spatial Root checked out inside this repository at `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`.
+- Canonical Spatial Root source: `https://github.com/Cult-DSP/spatialroot/tree/host-render`.
 - ADM/BW64 input plus Spatial Root layout JSON.
 - No visualization.
 - No cross-platform packaging.
@@ -34,16 +35,16 @@ The plugin has:
 Spatial Root is checked out inside this repository at:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
 ```
 
-That checkout is currently on `devel` at commit `b786ef8`, with submodules initialized recursively.
+That checkout is pinned to the canonical `host-render` branch at commit `4e04d37`, with submodules initialized recursively. The older `spatialroot-embedding` fork is no longer the canonical dependency for this project.
 
 The realtime engine has been built from that in-repo checkout. Key local artifacts:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/build/source/spatial_engine/realtimeEngine/libEngineSessionCore.a
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/build/source/spatial_engine/realtimeEngine/spatialroot_realtime
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/build/source/spatial_engine/realtimeEngine/libEngineSessionCore.a
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/build/source/spatial_engine/realtimeEngine/spatialroot_realtime
 ```
 
 ## Open in Unreal
@@ -77,7 +78,7 @@ Build:
 The first benchmark layout is:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/speaker_layouts/translab-sono-layout.json
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/speaker_layouts/translab-sono-layout.json
 ```
 
 It contains 16 speakers plus 2 subwoofers, using channels `0` through `17`. The bridge reports this as an 18-channel Spatial Root output requirement and configures the Unreal render-bus component for the same channel count.

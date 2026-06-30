@@ -17,7 +17,7 @@ Initial files discovered there include ADM/BW64 candidate WAV files, LUSID packa
 Layout JSON files are available in the in-repo Spatial Root checkout under:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/speaker_layouts
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/speaker_layouts
 ```
 
 Candidates include `stereo.json`, `example_layouts/5_1.json`, `example_layouts/quad_4.json`, and larger multichannel examples.

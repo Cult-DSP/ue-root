@@ -22,7 +22,7 @@ FString SpatialRootCheckoutRoot()
 {
     return FPaths::ConvertRelativePathToFull(FPaths::Combine(
         FPaths::ProjectDir(),
-    TEXT("Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding")));
+        TEXT("Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot")));
 }
 }
 

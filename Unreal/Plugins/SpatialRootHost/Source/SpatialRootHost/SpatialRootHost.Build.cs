@@ -8,9 +8,9 @@ public class SpatialRootHost : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         string PluginRoot = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../"));
-    string SpatialRootRoot = Path.Combine(PluginRoot, "Source/ThirdParty/spatialroot-embedding");
-    string SpatialRootBuild = Path.Combine(SpatialRootRoot, "build");
-    string EngineSessionLib = Path.Combine(SpatialRootBuild, "source/spatial_engine/realtimeEngine/libEngineSessionCore.a");
+        string SpatialRootRoot = Path.Combine(PluginRoot, "Source/ThirdParty/SpatialRoot/spatialroot");
+        string SpatialRootBuild = Path.Combine(SpatialRootRoot, "build");
+        string EngineSessionLib = Path.Combine(SpatialRootBuild, "source/spatial_engine/realtimeEngine/libEngineSessionCore.a");
 
         PublicDependencyModuleNames.AddRange(new[]
         {

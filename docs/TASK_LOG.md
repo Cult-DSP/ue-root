@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked under `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding` (branch `devel`), with recursive submodules initialized.
+The repository has a minimal Unreal project shell at `Unreal/UERoot.uproject` and a `SpatialRootHost` runtime plugin. Spatial Root is tracked as a submodule under `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, pointed at the canonical Cult-DSP `host-render` branch.
 
-`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The Spatial Root submodule now includes an Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. `USpatialRootRenderBusComponent` can now pull from the host bus via `USpatialRootBridge`, but this flow still needs in-editor runtime verification.
+`SpatialRootHost` links `EngineSessionCore` from the Spatial Root submodule build artifact and compiles with real `EngineSession` lifecycle calls. The canonical Spatial Root `host-render` branch includes the Internal Host Bus API that renders PCM into a host-owned interleaved buffer without opening a device. The TransLab layout is the benchmark target, parsed as 18 output channels. `USpatialRootRenderBusComponent` can pull from the host bus via `USpatialRootBridge`, but this flow still needs in-editor runtime verification after the dependency repoint.
 
 ## Confirmed Facts
 
@@ -28,6 +28,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Evidence: `/Users/lucian/projects/spatialroot` contains `CMakeLists.txt`, `spatial_engine`, `gui`, `sourceData`, and related source directories.
 - File or command: `ls -la /Users/lucian/projects/spatialroot`
 
+- Fact: The canonical Spatial Root host-render source is now `https://github.com/Cult-DSP/spatialroot/tree/host-render`.
+- Evidence: The in-repo submodule was repointed to `https://github.com/Cult-DSP/spatialroot.git` with `branch = host-render`, then pinned to commit `4e04d37`.
+- File or command: `.gitmodules`; `git rev-parse --short HEAD`
+
 - Fact: A fresh Spatial Root clone now exists inside this repo.
 - Evidence: The clone is on branch `devel`, commit `b786ef8`, and has a clean worktree after recursive submodule initialization.
 - File or command: `git clone --branch devel /Users/lucian/projects/spatialroot Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`; `git submodule update --init --recursive`; `git status --short`
@@ -36,13 +40,13 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Evidence: Parent index records mode `160000` for the Spatial Root path and `git ls-files` lists only one path under `SpatialRoot/spatialroot`.
 - File or command: `git ls-files --stage | rg "160000|SpatialRoot/spatialroot|\\.gitmodules"`; `git ls-files Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot | wc -l`
 
-- Fact: Spatial Root checkout is on branch `devel` at commit `b786ef8`.
-- Evidence: Git branch and revision commands.
-- File or command: `git branch --show-current`; `git rev-parse --short HEAD`
+- Fact: Spatial Root checkout is pinned detached at canonical `host-render` commit `4e04d37`.
+- Evidence: Git branch and revision commands from the submodule.
+- File or command: `git status --short --branch`; `git rev-parse --short HEAD`
 
-- Fact: Spatial Root worktree is dirty before this session's edits.
-- Evidence: Modified `LUSID`, modified `cult_transcoder`, and untracked `thirdparty/allolib/`.
-- File or command: `git status --short`
+- Fact: The preferred local Spatial Root checkout at `/Users/lucian/projects/spatialroot` was not edited during the dependency repoint.
+- Evidence: It had pre-existing local dirty state on `devel`, while `origin/host-render` was used as the source ref for the submodule pin.
+- File or command: `git status --short --branch`; `git branch -r --list 'origin/host-render'`
 
 - Fact: `EngineSession` is declared in Spatial Root and builds as `EngineSessionCore`.
 - Evidence: Header and CMake inspection.
@@ -56,13 +60,9 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Evidence: `EngineSession::start()` creates `RealtimeBackend`; `RealtimeBackend::init()` calls `mAudioIO.open()`; `RealtimeBackend::start()` calls `mAudioIO.start()`.
 - File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
 
-- Fact: No public host-pull render-buffer method was found on `EngineSession`.
-- Evidence: `EngineSession.hpp` exposes lifecycle, setters, status, diagnostics, and shutdown, but no render/process block method that writes into a host-provided buffer.
-- File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/spatial_engine/realtimeEngine/src/EngineSession.hpp`
-
 - Fact: Internal Host Bus output mode was added to `EngineSession` for host-pull rendering.
 - Evidence: `EngineSession` now exposes `setAudioOutputMode`, `prepareInternalHostBus`, and `renderHostBlock` with interleaved PCM output.
-- File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+- File or command: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
 
 - Fact: `UERootEditor` builds successfully with the `SpatialRootHost` plugin skeleton.
 - Evidence: UnrealBuildTool completed 15 actions and linked `UnrealEditor-UERoot.dylib` and `UnrealEditor-SpatialRootHost.dylib`.
@@ -85,10 +85,6 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - File or command: `Unreal/Plugins/SpatialRootHost/Source/SpatialRootHost/Public/SpatialRootRenderBusComponent.h`
 
 ## Open Questions
-
-- Question: Should Spatial Root be integrated into `ue-root` as a git submodule, copied ThirdParty source, or linked from the local absolute path for the first pass?
-- Why it matters: A nested fresh clone now exists, but the parent repo still needs an intentional tracking strategy.
-- Suggested next step: Decide whether to convert the nested clone to a formal git submodule or leave it as a local development checkout.
 
 - Question: Which local ADM/BW64 file and layout JSON should be the first canonical Unreal test pair?
 - Why it matters: SourceData contains candidate WAV and LUSID files, and layout JSONs exist in the in-repo clone, but a known-good pair still needs confirmation.
@@ -130,6 +126,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Result: Added `.gitmodules` mapping to `https://github.com/Cult-DSP/spatialroot.git` on `devel`; parent tracks only the gitlink at commit `b786ef8`, while submodule build output remains ignored inside the submodule.
 - Files changed: `.gitmodules`, `docs/TASK_LOG.md`
 
+- Task: Repointed `ue-root` to canonical Spatial Root host-render.
+- Result: Moved the submodule from the old `spatialroot-embedding` path to `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, updated `.gitmodules` to `https://github.com/Cult-DSP/spatialroot.git` on `host-render`, pinned the submodule to `4e04d37`, and rebuilt both Spatial Root engine-only and `UERootEditor` successfully.
+- Files changed: `.gitmodules`, `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, `SpatialRootHost.Build.cs`, `SpatialRootBridge.cpp`, docs updates
+
 - Task: Built Unreal shell/plugin.
 - Result: `UERootEditor` build succeeded.
 - Files changed: Generated Unreal build outputs under ignored directories.
@@ -144,13 +144,13 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 
 - Task: Added Internal Host Bus host-pull API to Spatial Root.
 - Result: `EngineSession` can render interleaved PCM blocks without opening a hardware device. Host bus configuration and warnings are documented.
-- Files changed: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding/source/spatial_engine/realtimeEngine/src/EngineSession.*`, `RealtimeBackend.hpp`, `RealtimeTypes.hpp`, `Spatializer.hpp`, `Streaming.hpp`, `internalDocs/HOST_RENDER_BACKEND.md`
+- Files changed: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/realtimeEngine/src/EngineSession.*`, `RealtimeBackend.hpp`, `RealtimeTypes.hpp`, `Spatializer.hpp`, `Streaming.hpp`, `internalDocs/HOST_RENDER_BACKEND.md`
 
 - Task: Wired Unreal render bus to host-pull PCM.
 - Result: `USpatialRootRenderBusComponent` can call `renderHostBlock()` through `USpatialRootBridge` when `bUseSpatialRootHostBus` is enabled; diagnostics now capture last warnings.
 - Files changed: `SpatialRootBridge.h`, `SpatialRootBridge.cpp`, `SpatialRootRenderBusComponent.h`, `SpatialRootRenderBusComponent.cpp`, `SpatialRootDiagnostics.h`, docs updates
 
-- Task: Rebuilt `UERootEditor` after spatialroot-embedding path updates.
+- Task: Rebuilt `UERootEditor` after SpatialRoot/spatialroot path updates.
 - Result: Unreal build succeeds with the updated include/library paths.
 - Files changed: `SpatialRootHost.Build.cs`
 
@@ -161,10 +161,10 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - Editor launch path: `/Users/lucian/UE_5.7/Engine/Binaries/Mac/UnrealEditor.app`
 - Project path: `/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject`
 - Build command: `/Users/lucian/UE_5.7/Engine/Build/BatchFiles/Mac/Build.sh UERootEditor Mac Development -project=/Users/lucian/projects/cultProjects/ue-root/Unreal/UERoot.uproject -WaitMutex`
-- Build result: Succeeded.
+- Build result: Succeeded after repointing to canonical `host-render`.
 - Plugin status: Compiles with `EngineSessionCore` linked.
 - Spatial Root dependency status: In-repo clone found and built; linked into the Unreal plugin.
-- In-repo Spatial Root checkout: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`, branch `devel`, commit `b786ef8`, recursive submodules initialized.
+- In-repo Spatial Root checkout: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`, canonical `host-render`, commit `4e04d37`, recursive submodules initialized.
 - Audio test status: Test-tone synth and render-bus synth components compile; not yet run/auditioned in editor.
 - Next step: Add a minimal level/actor or Blueprint to instantiate the test tone and expose bridge diagnostics.
 
@@ -187,14 +187,15 @@ The repository now has a minimal Unreal project shell at `Unreal/UERoot.uproject
 - UE sample rate: Unknown.
 - UE output channel count: Unknown.
 - Spatial Root render-buffer path: Internal Host Bus API now available.
+- Spatial Root engine-only build: Succeeded from the canonical `host-render` submodule after clearing the old CMake cache from the previous submodule path.
 - Blocker: Unreal runtime validation still pending (host bus path not auditioned in editor yet).
 - Next step: Build plugin, enable host bus in `USpatialRootRenderBusComponent`, and verify `renderHostBlock()` output in-editor.
 
 ## Spatial Root Investigation
 
-- Spatial Root path: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding`
-- Branch: `devel`
-- Commit: `b786ef8`
+- Spatial Root path: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot`
+- Branch: canonical `host-render` pin, checked out detached in the submodule
+- Commit: `4e04d37`
 - EngineSession found: Yes
 - EngineSession source files: `spatial_engine/realtimeEngine/src/EngineSession.hpp`, `spatial_engine/realtimeEngine/src/EngineSession.cpp`
 - ADM/BW64 load path: `SceneInput::admFile` with `Streaming::loadSceneFromADM`, after LUSID scene load.

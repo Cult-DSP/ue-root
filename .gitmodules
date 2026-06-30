@@ -1,5 +1,5 @@
 
-[submodule "Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding"]
-	path = Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
-	url = https://github.com/lucianpar/spatialroot-embedding
-	branch = devel
+[submodule "Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot"]
+	path = Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+	url = https://github.com/Cult-DSP/spatialroot.git
+	branch = host-render

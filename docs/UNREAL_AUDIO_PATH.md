@@ -39,7 +39,13 @@ UE procedural source + Internal Host Bus, when `bUseSpatialRootHostBus` is enabl
 Spatial Root is checked out inside the plugin at:
 
 ```text
-Unreal/Plugins/SpatialRootHost/Source/ThirdParty/spatialroot-embedding
+Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot
+```
+
+This submodule points to the canonical Spatial Root repository on the `host-render` branch:
+
+```text
+https://github.com/Cult-DSP/spatialroot/tree/host-render
 ```
 
 Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareDevice mode. Internal Host Bus mode keeps rendering in-process while allowing Unreal to own the final output device.
@@ -54,4 +60,4 @@ Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareD
 6. Confirm `renderHostBlock()` is feeding the render bus component via `USpatialRootBridge` with `bUseSpatialRootHostBus` enabled.
 7. Verify rendered audio exits Unreal's device at the expected channels and document any channel-count or sample-rate mismatches.
 
-The Internal Host Bus API (`renderHostBlock()`, `prepareInternalHostBus()`, `setAudioOutputMode()`) is implemented and documented in `spatialroot-embedding/internalDocs/HOST_RENDER_BACKEND.md`.
+The Internal Host Bus API (`renderHostBlock()`, `prepareInternalHostBus()`, `setAudioOutputMode()`) is implemented and documented in `SpatialRoot/spatialroot/internalDocs/HOST_RENDER_BACKEND.md`. Runtime audio validation in the Unreal editor is still pending.
