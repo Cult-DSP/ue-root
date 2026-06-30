@@ -31,6 +31,7 @@ The plugin has:
 - A `FSpatialRootDiagnostics` model.
 - A `USpatialRootTestToneComponent` Unreal synth source for proving generated audio can enter Unreal independently of Spatial Root.
 - A `USpatialRootRenderBusComponent` 18-channel Unreal synth source for the intended internal render-bus handoff.
+- An `ASpatialRootHostTestActor` runtime harness that owns the test tone and render-bus synth components and exposes Blueprint-callable start/stop methods for editor validation.
 
 Spatial Root is checked out inside this repository at:
 
@@ -99,3 +100,13 @@ Unreal-selected output device channel N
 ```
 
 That path is now available through the host-bus API; the Unreal bridge can invoke `renderHostBlock()` when `bUseSpatialRootHostBus` is enabled, but runtime verification is still pending.
+
+## Runtime Test Harness
+
+For the next in-editor validation pass, place or spawn `ASpatialRootHostTestActor` in a test map. The actor provides editable ADM/BW64, LUSID scene, and layout paths. It also exposes:
+
+- `StartTestTone()` / `StopTestTone()` for a basic Unreal synth sanity check.
+- `StartSpatialRootHostBus()` / `StopSpatialRootHostBus()` for the Internal Host Bus path.
+- `GetDiagnostics()` for the current bridge status.
+
+The initial content folders are present at `Unreal/Content/UI` and `Unreal/Content/Maps`, but no `.uasset` map or UMG widget has been authored yet.

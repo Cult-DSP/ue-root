@@ -15,6 +15,8 @@ The `SpatialRootHost` plugin includes `USpatialRootTestToneComponent`, a `USynth
 
 The plugin also includes `USpatialRootRenderBusComponent`, an 18-channel `USynthComponent` queue intended to act as the Unreal-side render-bus insertion point. It accepts interleaved float buffers through C++ and outputs queued samples through Unreal's generated-audio source path. When the queue is empty it outputs silence and increments an underrun counter. The component can also pull directly from the new Internal Host Bus API when `bUseSpatialRootHostBus` is enabled and a bridge reference is provided.
 
+`ASpatialRootHostTestActor` now provides a minimal source-controlled runtime harness. It owns a `USpatialRootTestToneComponent` and `USpatialRootRenderBusComponent`, obtains the `USpatialRootBridge` from `USpatialRootSubsystem`, assigns that bridge to the render bus, and exposes Blueprint-callable methods to start/stop either the test tone or the Spatial Root Internal Host Bus path.
+
 For the TransLab benchmark, Spatial Root layout channels map directly to Unreal render-bus channels:
 
 ```text
@@ -53,11 +55,10 @@ Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareD
 ## Next Test
 
 1. Build the project.
-2. Add `USpatialRootRenderBusComponent` to an actor or simple Blueprint and configure it for 18 channels.
-3. Add `USpatialRootTestToneComponent` separately for an audible basic source sanity check.
-4. Start the components and confirm Unreal sample rate/output channel count if accessible.
-5. Start `EngineSession` with a LUSID scene, ADM file, and the TransLab layout using `AudioOutputMode::InternalHostBus` and `prepareInternalHostBus()`.
-6. Confirm `renderHostBlock()` is feeding the render bus component via `USpatialRootBridge` with `bUseSpatialRootHostBus` enabled.
-7. Verify rendered audio exits Unreal's device at the expected channels and document any channel-count or sample-rate mismatches.
+2. Create a minimal test map and place `ASpatialRootHostTestActor`.
+3. Set `AdmBwfPath`, `LusidScenePath`, `LayoutPath`, `RequestedChannelCount`, `HostBusBlockSize`, and `HostBusSampleRate` on the actor.
+4. Call `StartTestTone()` and confirm Unreal-generated audio exits the selected output device.
+5. Call `StartSpatialRootHostBus()` and confirm `renderHostBlock()` feeds `USpatialRootRenderBusComponent`.
+6. Verify rendered audio exits Unreal's device at the expected channels and document any channel-count or sample-rate mismatches.
 
 The Internal Host Bus API (`renderHostBlock()`, `prepareInternalHostBus()`, `setAudioOutputMode()`) is implemented and documented in `SpatialRoot/spatialroot/internalDocs/HOST_RENDER_BACKEND.md`. Runtime audio validation in the Unreal editor is still pending.
