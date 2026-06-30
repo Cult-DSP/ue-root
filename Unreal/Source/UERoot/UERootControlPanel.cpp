@@ -1,7 +1,10 @@
 #include "UERootControlPanel.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/CheckBox.h"
 #include "Components/EditableTextBox.h"
 #include "Components/HorizontalBox.h"
@@ -95,8 +98,21 @@ void UUERootControlPanel::BuildWidgetTree()
         return;
     }
 
+    UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("SpatialRootControlPanelCanvas"));
+    WidgetTree->RootWidget = Canvas;
+
+    UBorder* PanelBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SpatialRootControlPanelBorder"));
+    PanelBorder->SetPadding(FMargin(10.0f));
+    PanelBorder->SetBrushColor(FLinearColor(0.02f, 0.025f, 0.03f, 0.86f));
+
+    UCanvasPanelSlot* PanelSlot = Canvas->AddChildToCanvas(PanelBorder);
+    PanelSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+    PanelSlot->SetAlignment(FVector2D(0.0f, 0.0f));
+    PanelSlot->SetPosition(FVector2D(24.0f, 24.0f));
+    PanelSlot->SetSize(FVector2D(720.0f, 820.0f));
+
     UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("SpatialRootControlPanel"));
-    WidgetTree->RootWidget = Scroll;
+    PanelBorder->SetContent(Scroll);
 
     UVerticalBox* RootBox = WidgetTree->ConstructWidget<UVerticalBox>();
     Scroll->AddChild(RootBox);
@@ -164,6 +180,8 @@ void UUERootControlPanel::BuildWidgetTree()
     DiagnosticsText = MakeText(WidgetTree, TEXT("Diagnostics pending."), 12.0f);
     AddPaddedChild(RootBox, MakeText(WidgetTree, TEXT("Diagnostics"), 16.0f), FMargin(8.0f, 12.0f, 8.0f, 2.0f));
     AddPaddedChild(RootBox, DiagnosticsText);
+
+    UE_LOG(LogTemp, Log, TEXT("UERootControlPanel built native widget tree."));
 }
 
 void UUERootControlPanel::SyncFieldsFromActor()
