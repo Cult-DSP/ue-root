@@ -10,8 +10,12 @@ public class UERoot : ModuleRules
         {
             "Core",
             "CoreUObject",
-            "Engine"
+            "Engine",
+            "InputCore",
+            "Slate",
+            "SlateCore",
+            "SpatialRootHost",
+            "UMG"
         });
     }
 }
-

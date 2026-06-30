@@ -17,6 +17,8 @@ The plugin also includes `USpatialRootRenderBusComponent`, an 18-channel `USynth
 
 `ASpatialRootHostTestActor` now provides a minimal source-controlled runtime harness. It owns a `USpatialRootTestToneComponent` and `USpatialRootRenderBusComponent`, obtains the `USpatialRootBridge` from `USpatialRootSubsystem`, assigns that bridge to the render bus, and exposes Blueprint-callable methods to start/stop either the test tone or the Spatial Root Internal Host Bus path.
 
+`AUERootGameMode` is configured as the default game mode and spawns the harness plus `UUERootControlPanel`. The panel is a native C++ UMG widget that exposes path fields, Start/Pause/Resume/Stop, runtime controls, live update, Apply Params, and diagnostics without requiring a binary widget asset.
+
 For the TransLab benchmark, Spatial Root layout channels map directly to Unreal render-bus channels:
 
 ```text
@@ -26,7 +28,7 @@ Unreal source/submix/master output
 hardware device channel N, if Unreal exposes the channel
 ```
 
-This mapping is only meaningful once Spatial Root can provide rendered PCM to the component. `EngineSessionCore` now exposes `renderHostBlock()` for host-pull rendering, and `USpatialRootRenderBusComponent` can invoke it through `USpatialRootBridge` when configured.
+This mapping is only confirmed once runtime audio validation proves the rendered channels reach the selected Unreal output device. `EngineSessionCore` exposes `renderHostBlock()` for host-pull rendering, and `USpatialRootRenderBusComponent` can invoke it through `USpatialRootBridge` when configured.
 
 ## Current Audio Path Mode
 
@@ -55,10 +57,14 @@ Current Spatial Root realtime output is driven by AlloLib `AudioIO` in HardwareD
 ## Next Test
 
 1. Build the project.
-2. Create a minimal test map and place `ASpatialRootHostTestActor`.
-3. Set `AdmBwfPath`, `LusidScenePath`, `LayoutPath`, `RequestedChannelCount`, `HostBusBlockSize`, and `HostBusSampleRate` on the actor.
-4. Call `StartTestTone()` and confirm Unreal-generated audio exits the selected output device.
-5. Call `StartSpatialRootHostBus()` and confirm `renderHostBlock()` feeds `USpatialRootRenderBusComponent`.
+2. Open or run the project so the default `AUERootGameMode` spawns `ASpatialRootHostTestActor` and `UUERootControlPanel`.
+3. Confirm the editable path fields point at the intended ADM/BW64 candidate, LUSID scene, and TransLab layout.
+4. Press `Start Tone` and confirm Unreal-generated audio exits the selected output device.
+5. Press `Start` and confirm `renderHostBlock()` feeds `USpatialRootRenderBusComponent`.
 6. Verify rendered audio exits Unreal's device at the expected channels and document any channel-count or sample-rate mismatches.
+
+## Validation Notes
+
+The project builds successfully with the native harness and control panel. An unattended command-line launch using `UnrealEditor-Cmd -game -NullRHI -Unattended -ExecCmds=quit` did not exit cleanly and emitted macOS service warnings, so audible/runtime validation still needs an interactive editor run.
 
 The Internal Host Bus API (`renderHostBlock()`, `prepareInternalHostBus()`, `setAudioOutputMode()`) is implemented and documented in `SpatialRoot/spatialroot/internalDocs/HOST_RENDER_BACKEND.md`. Runtime audio validation in the Unreal editor is still pending.

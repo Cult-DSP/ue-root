@@ -22,4 +22,10 @@ Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/
 
 Candidates include `stereo.json`, `example_layouts/5_1.json`, `example_layouts/quad_4.json`, and larger multichannel examples.
 
-A first ADM/BW64 plus LUSID scene plus layout JSON pair still needs confirmation before treating any run as a valid Spatial Root integration test.
+Current default candidate values in the C++ runtime harness are:
+
+- ADM/BW64 candidate: `/Users/lucian/projects/spatialroot/sourceData/CANYON-ATMOS-LFE.wav`
+- LUSID scene candidate: `/Users/lucian/projects/spatialroot/sourceData/lusid_package/scene.lusid.json`
+- Layout JSON: `Unreal/Plugins/SpatialRootHost/Source/ThirdParty/SpatialRoot/spatialroot/source/spatial_engine/speaker_layouts/translab-sono-layout.json`
+
+This candidate pair still needs interactive runtime confirmation before treating it as a known-good Spatial Root integration test. The local transcoder report files under `sourceData` do not confirm the pair; they record failed attempts to treat LUSID JSON as transcoder input.

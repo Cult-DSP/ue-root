@@ -20,6 +20,8 @@ Initial target:
 - No visualization in the first milestone
 - Hybrid C++ plus Blueprint/UMG architecture
 
+Current implementation note: the first-pass UI is a native C++ UMG widget (`UUERootControlPanel`) spawned by `AUERootGameMode`, rather than a binary `.uasset` widget. This keeps the control surface source-controlled while runtime audio validation is still in progress.
+
 ## Core Claim
 
 `ue-root` demonstrates that Spatial Root can operate as an embedded spatial audio runtime inside a game-engine host.
@@ -59,6 +61,7 @@ The first milestone should allow the user to:
 Required controls:
 
 - ADM/BW64 input path
+- LUSID scene path, required by the current `EngineSession::loadScene()` path before ADM direct streaming
 - layout JSON path
 - Start
 - Pause
@@ -75,6 +78,7 @@ Required diagnostics:
 
 - engine initialized
 - ADM path
+- LUSID scene path
 - layout path
 - ADM loaded status
 - layout loaded status
@@ -98,9 +102,10 @@ UERoot Unreal App
           ├── Source/
           │   ├── SpatialRootHost/
           │   │   ├── SpatialRootSubsystem
-          │   │   ├── SpatialRootComponent
+          │   │   ├── SpatialRootHostTestActor
           │   │   ├── SpatialRootBridge
-          │   │   ├── SpatialRootAudioSource / Generator
+          │   │   ├── SpatialRootRenderBusComponent
+          │   │   ├── SpatialRootTestToneComponent
           │   │   └── SpatialRootDiagnostics
           │   └── ThirdParty/
           │       └── SpatialRoot/
@@ -119,7 +124,7 @@ SpatialRootBridge
     ↓
 Spatial Root EngineSession API
     ↓
-Spatial Root rendered PCM, if available
+Spatial Root rendered PCM through Internal Host Bus
     ↓
 Unreal procedural source / generator
     ↓
@@ -134,7 +139,7 @@ The preferred proof of concept is:
 
 ```text
 Spatial Root embedded engine
-    exposes rendered PCM somehow
+    exposes rendered PCM through Internal Host Bus
         ↓
 Unreal audio generator / source
         ↓
@@ -151,14 +156,7 @@ Therefore, the key technical question is:
 Can the current locked Spatial Root API provide rendered PCM blocks without opening its own hardware audio device?
 ```
 
-If yes, `ue-root` should route those buffers into Unreal's audio path.
-
-If no, the first pass should:
-
-- build the plugin skeleton,
-- build a test procedural audio source,
-- document the missing Spatial Root render-buffer access,
-- avoid pretending the integration is complete.
+Current status: Spatial Root exposes `renderHostBlock()` through the Internal Host Bus API on the canonical `host-render` branch. `USpatialRootRenderBusComponent` can pull those buffers through `USpatialRootBridge`. Audible/editor validation is still pending, so documentation should not yet claim confirmed playback through Unreal's output device.
 
 ## Spatial Root API Policy
 
@@ -227,7 +225,7 @@ The agent should document whether Spatial Root is:
 
 The first milestone is ADM/BW64 input only.
 
-The UI should not require the user to select a LUSID scene for v0.1 unless Spatial Root's current EngineSession path requires ADM to be transcoded to LUSID first.
+The current `EngineSession::loadScene()` path still requires a LUSID scene path even when `SceneInput::admFile` is set for ADM direct streaming, so the first-pass UI exposes a LUSID scene field.
 
 If ADM/BW64 cannot be loaded directly through the current locked Spatial Root API, the agent should document the required ingest path rather than inventing a new one.
 
@@ -328,7 +326,7 @@ Minimum success:
 - Unreal project opens.
 - `SpatialRootHost` plugin exists.
 - `SpatialRootBridge` skeleton exists.
-- UI skeleton exists.
+- Native runtime UI exists.
 - diagnostics panel exists.
 - README explains setup and limitations.
 - documentation clearly states whether Spatial Root can currently feed Unreal's audio path.
@@ -354,4 +352,4 @@ Strong success:
 
 Spatial Root can be embedded as a spatial audio runtime inside a game-engine host. Unreal provides application control, UI, diagnostics, and the eventual output path, while Spatial Root provides ADM/BW64 scene handling, layout-aware rendering, and runtime spatial audio behavior.
 
-If the first milestone only reaches the skeleton or test-generator phase, the documentation should clearly state the remaining technical requirement: a Spatial Root render-buffer path suitable for Unreal's procedural audio source/generator model.
+The remaining proof point is interactive runtime validation: confirm the UE test tone is audible, then confirm Spatial Root `renderHostBlock()` output is audible through Unreal's selected output device with channel/sample-rate behavior documented.

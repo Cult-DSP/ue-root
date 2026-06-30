@@ -32,6 +32,8 @@ The plugin has:
 - A `USpatialRootTestToneComponent` Unreal synth source for proving generated audio can enter Unreal independently of Spatial Root.
 - A `USpatialRootRenderBusComponent` 18-channel Unreal synth source for the intended internal render-bus handoff.
 - An `ASpatialRootHostTestActor` runtime harness that owns the test tone and render-bus synth components and exposes Blueprint-callable start/stop methods for editor validation.
+- A native C++ `UUERootControlPanel` that builds a basic UMG control panel at runtime.
+- An `AUERootGameMode` configured as the default game mode to spawn the harness and panel into the default map.
 
 Spatial Root is checked out inside this repository at:
 
@@ -103,10 +105,20 @@ That path is now available through the host-bus API; the Unreal bridge can invok
 
 ## Runtime Test Harness
 
-For the next in-editor validation pass, place or spawn `ASpatialRootHostTestActor` in a test map. The actor provides editable ADM/BW64, LUSID scene, and layout paths. It also exposes:
+The default game mode spawns `ASpatialRootHostTestActor` and a native `UUERootControlPanel` when the project runs. The panel provides editable ADM/BW64, LUSID scene, and layout paths, transport buttons, runtime sliders, a live update toggle, an Apply Params button, and diagnostics.
+
+The harness exposes:
 
 - `StartTestTone()` / `StopTestTone()` for a basic Unreal synth sanity check.
 - `StartSpatialRootHostBus()` / `StopSpatialRootHostBus()` for the Internal Host Bus path.
 - `GetDiagnostics()` for the current bridge status.
 
-The initial content folders are present at `Unreal/Content/UI` and `Unreal/Content/Maps`, but no `.uasset` map or UMG widget has been authored yet.
+The initial content folders are present at `Unreal/Content/UI` and `Unreal/Content/Maps`, but no binary `.uasset` map or widget has been authored. The current UI is source-controlled C++.
+
+Default candidate test values are:
+
+- ADM/BW64 candidate: `/Users/lucian/projects/spatialroot/sourceData/CANYON-ATMOS-LFE.wav`
+- LUSID scene candidate: `/Users/lucian/projects/spatialroot/sourceData/lusid_package/scene.lusid.json`
+- Layout: the in-repo TransLab layout
+
+These are candidates, not a confirmed-good pair, until an interactive editor run verifies loading and audible output.

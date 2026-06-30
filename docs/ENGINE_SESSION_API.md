@@ -12,7 +12,7 @@
 
 `EngineSession` is a default-constructible C++ class. The current Spatial Root source builds it into the `EngineSessionCore` static library target.
 
-The ImGui app and realtime CLI both instantiate `EngineSession` directly. This supports external C++ host construction in principle, pending Unreal build/link work.
+The ImGui app and realtime CLI both instantiate `EngineSession` directly. `SpatialRootHost` now links `EngineSessionCore`, and `USpatialRootBridge` constructs and drives `EngineSession` from Unreal C++.
 
 ## Configuration Sequence
 
@@ -127,7 +127,7 @@ Unreal mixer routing now has a callable host-owned PCM path via:
 int renderHostBlock(float* InterleavedOutput, int32 NumFrames, int32 NumChannels);
 ```
 
-This path does **not** open a hardware device and can feed `USpatialRootRenderBusComponent` (or another UE procedural source). Runtime validation inside the Unreal editor is still pending.
+This path does **not** open a hardware device and can feed `USpatialRootRenderBusComponent` (or another UE procedural source). Runtime audio validation inside the Unreal editor is still pending.
 
 ## In-Repo Checkout
 
@@ -168,6 +168,8 @@ renderHostBlock(interleaved output, frames, channels)
 
 Important: `StartHostBus()` does not call `EngineSession::start()`. Internal Host Bus mode is the preferred Unreal-owned output path because it lets Unreal own the hardware device.
 
+`AUERootGameMode` and `UUERootControlPanel` provide the current source-controlled editor/runtime harness for this path. The panel exposes the ADM/BW64 path, LUSID scene path, layout path, transport controls, runtime parameters, and diagnostics.
+
 ## TransLab Benchmark Layout
 
 The benchmark layout is:
@@ -184,6 +186,6 @@ The layout has 16 speakers plus 2 subwoofers, channels `0` through `17`, for an 
 
 ## Open Questions
 
-- Which LUSID scene should pair with each ADM/BW64 file for the first Unreal test?
-- Which LUSID scene should pair with each ADM/BW64 file for the first Unreal test?
+- Is `/Users/lucian/projects/spatialroot/sourceData/CANYON-ATMOS-LFE.wav` plus `/Users/lucian/projects/spatialroot/sourceData/lusid_package/scene.lusid.json` a confirmed-good first Unreal test pair?
 - Can `USpatialRootRenderBusComponent` be auditioned in the editor with `bUseSpatialRootHostBus` enabled?
+- What sample rate and actual output channel count does Unreal report with the selected local audio device?
